@@ -1,13 +1,16 @@
 import { CVData } from '@/types/cv'
+import { getSectionLabels } from '@/lib/sectionLabels'
+import { ContactItem } from './utils'
 
-interface Props { cvData: CVData }
+interface Props { cvData: CVData; language?: string }
 
 const PEACH = '#F2C4A0'
 const PEACH_BAND = '#F9E4D0'
 const ACCENT = '#C97D50'
 const SIDEBAR_BG = '#F5F5F3'
 
-export default function PastelSidebarTemplate({ cvData }: Props) {
+export default function PastelSidebarTemplate({ cvData, language }: Props) {
+  const L = getSectionLabels(language)
   return (
     <div
       id="cv-content"
@@ -16,33 +19,22 @@ export default function PastelSidebarTemplate({ cvData }: Props) {
     >
       {/* Left sidebar */}
       <div style={{ width: '30%', background: SIDEBAR_BG, padding: '32px 16px', flexShrink: 0 }}>
-        {/* Circular photo with peach bg */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-          <div style={{ position: 'relative', width: 96, height: 96 }}>
-            {/* Peach background circle (offset) */}
-            <div style={{
-              position: 'absolute', bottom: -6, right: -6,
-              width: 88, height: 88, borderRadius: '50%', background: PEACH,
-            }} />
-            {cvData.photo ? (
+        {/* Circular photo with peach bg — hidden entirely when not set */}
+        {cvData.photo && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <div style={{ position: 'relative', width: 96, height: 96 }}>
+              <div style={{
+                position: 'absolute', bottom: -6, right: -6,
+                width: 88, height: 88, borderRadius: '50%', background: PEACH,
+              }} />
               <img
                 src={cvData.photo}
                 alt="Photo"
                 style={{ position: 'relative', width: 88, height: 88, borderRadius: '50%', objectFit: 'cover', zIndex: 1 }}
               />
-            ) : (
-              <div style={{
-                position: 'relative', width: 88, height: 88, borderRadius: '50%',
-                background: '#E0DEDA', zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-                  <circle cx="24" cy="18" r="10" stroke="#AAA" strokeWidth="2" />
-                  <path d="M6 42c0-10 8-16 18-16s18 6 18 16" stroke="#AAA" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Contact */}
         {cvData.contact.length > 0 && (
@@ -50,7 +42,7 @@ export default function PastelSidebarTemplate({ cvData }: Props) {
             {cvData.contact.map((c, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, marginBottom: 7 }}>
                 <span style={{ color: ACCENT, fontSize: 9, marginTop: 2, flexShrink: 0 }}>◆</span>
-                <span style={{ fontSize: 10, color: '#555', lineHeight: 1.4, wordBreak: 'break-word' }}>{c}</span>
+                <ContactItem text={c} style={{ fontSize: 10, color: '#555', lineHeight: 1.4, wordBreak: 'break-word' }} />
               </div>
             ))}
           </div>
@@ -62,7 +54,7 @@ export default function PastelSidebarTemplate({ cvData }: Props) {
         {cvData.education.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#444', marginBottom: 8 }}>
-              Education
+              {L.education}
             </div>
             {cvData.education.map((edu, i) => (
               <div key={i} style={{ marginBottom: 10 }}>
@@ -80,13 +72,15 @@ export default function PastelSidebarTemplate({ cvData }: Props) {
         {cvData.skills.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#444', marginBottom: 6 }}>
-              Skills
+              {L.skills}
             </div>
             <div style={{ fontSize: 9, fontWeight: 600, color: ACCENT, marginBottom: 6 }}>// PROFESSIONAL</div>
             {cvData.skills.map((s, i) => (
-              <div key={i} style={{ fontSize: 10, color: '#555', marginBottom: 5, paddingBottom: 5, borderBottom: '1px solid #E8E8E4' }}>
-                {s}
-              </div>
+              s.startsWith('## ') ? (
+                <div key={i} style={{ fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 }}>{s.slice(3)}</div>
+              ) : (
+                <div key={i} style={{ fontSize: 10, color: '#555', marginBottom: 5, paddingBottom: 5, borderBottom: '1px solid #E8E8E4' }}>{s}</div>
+              )
             ))}
           </div>
         )}
@@ -96,7 +90,7 @@ export default function PastelSidebarTemplate({ cvData }: Props) {
           <div>
             <div style={{ height: 1, background: '#DDD', marginBottom: 12 }} />
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#444', marginBottom: 8 }}>
-              Languages
+              {L.languages}
             </div>
             {cvData.languages.map((l, i) => (
               <div key={i} style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>{l}</div>
@@ -133,7 +127,7 @@ export default function PastelSidebarTemplate({ cvData }: Props) {
         {cvData.experience.length > 0 && (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, color: '#333', marginBottom: 12 }}>
-              Work Experience
+              {L.experience}
             </div>
             {cvData.experience.map((exp, i) => (
               <div key={i} className="entry" style={{ marginBottom: 16 }}>
@@ -160,7 +154,7 @@ export default function PastelSidebarTemplate({ cvData }: Props) {
           <div>
             <div style={{ height: 1, background: '#EEE', marginBottom: 14 }} />
             <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, color: '#333', marginBottom: 8 }}>
-              Interests
+              {L.hobbies}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
               {cvData.hobbies.map((h, i) => (

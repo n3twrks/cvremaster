@@ -1,13 +1,15 @@
 import { CVData } from '@/types/cv'
-import { langScore, SegmentBar } from './utils'
+import { getSectionLabels } from '@/lib/sectionLabels'
+import { langScore, SegmentBar, ContactItem } from './utils'
 
-interface Props { cvData: CVData }
+interface Props { cvData: CVData; language?: string }
 
 const SIDEBAR = '#3C3C3C'
 const SIDEBAR_TEXT = '#FFFFFF'
 const SIDEBAR_MUTED = '#B0AFA9'
 
-export default function SidebarDarkTemplate({ cvData }: Props) {
+export default function SidebarDarkTemplate({ cvData, language }: Props) {
+  const L = getSectionLabels(language)
   return (
     <div
       id="cv-content"
@@ -16,20 +18,13 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
     >
       {/* Left sidebar */}
       <div style={{ width: '30%', background: SIDEBAR, color: SIDEBAR_TEXT, padding: '0 0 32px 0', flexShrink: 0 }}>
-        {/* Photo */}
-        {cvData.photo ? (
+        {/* Photo — hidden entirely when not set */}
+        {cvData.photo && (
           <img
             src={cvData.photo}
             alt="Photo"
             style={{ width: '100%', aspectRatio: '1 / 1', objectFit: 'cover', display: 'block' }}
           />
-        ) : (
-          <div style={{ width: '100%', aspectRatio: '1 / 1', background: '#555', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-              <circle cx="24" cy="18" r="10" stroke="#888" strokeWidth="2" />
-              <path d="M6 42c0-10 8-16 18-16s18 6 18 16" stroke="#888" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </div>
         )}
 
         <div style={{ padding: '20px 20px 0' }}>
@@ -39,7 +34,7 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
               {cvData.contact.map((c, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
                   <span style={{ color: SIDEBAR_MUTED, fontSize: 10, marginTop: 2 }}>◆</span>
-                  <span style={{ fontSize: 11, color: SIDEBAR_TEXT, lineHeight: 1.4 }}>{c}</span>
+                  <ContactItem text={c} style={{ fontSize: 11, color: SIDEBAR_TEXT, lineHeight: 1.4 }} />
                 </div>
               ))}
             </div>
@@ -51,7 +46,7 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
           {cvData.summary && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: SIDEBAR_TEXT, marginBottom: 8 }}>
-                Personal Summary
+                {L.summary}
               </div>
               <p style={{ fontSize: 11, color: SIDEBAR_MUTED, lineHeight: 1.6 }}>{cvData.summary}</p>
             </div>
@@ -63,13 +58,17 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
           {cvData.skills.length > 0 && (
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: SIDEBAR_TEXT, marginBottom: 8 }}>
-                Skills
+                {L.skills}
               </div>
               {cvData.skills.map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-                  <span style={{ color: SIDEBAR_MUTED, fontSize: 8 }}>•</span>
-                  <span style={{ fontSize: 11, color: SIDEBAR_MUTED }}>{s}</span>
-                </div>
+                s.startsWith('## ') ? (
+                  <div key={i} style={{ fontSize: 9, fontWeight: 700, color: SIDEBAR_TEXT, textTransform: 'uppercase', letterSpacing: 1, marginTop: 6, marginBottom: 2 }}>{s.slice(3)}</div>
+                ) : (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+                    <span style={{ color: SIDEBAR_MUTED, fontSize: 8 }}>•</span>
+                    <span style={{ fontSize: 11, color: SIDEBAR_MUTED }}>{s}</span>
+                  </div>
+                )
               ))}
             </div>
           )}
@@ -80,7 +79,7 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
               <div style={{ borderBottom: '1px solid #555', marginBottom: 16 }} />
               <div>
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: SIDEBAR_TEXT, marginBottom: 8 }}>
-                  Hobbies
+                  {L.hobbies}
                 </div>
                 {cvData.hobbies.map((h, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
@@ -108,7 +107,7 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
         {cvData.experience.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', borderBottom: '1.5px solid #ddd', paddingBottom: 4, marginBottom: 12 }}>
-              Work Experience
+              {L.experience}
             </div>
             {cvData.experience.map((exp, i) => (
               <div key={i} className="entry" style={{ marginBottom: 16 }}>
@@ -134,7 +133,7 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
         {cvData.education.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', borderBottom: '1.5px solid #ddd', paddingBottom: 4, marginBottom: 12 }}>
-              Education
+              {L.education}
             </div>
             {cvData.education.map((edu, i) => (
               <div key={i} className="entry" style={{ marginBottom: 10 }}>
@@ -150,7 +149,7 @@ export default function SidebarDarkTemplate({ cvData }: Props) {
         {cvData.languages.length > 0 && (
           <div>
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', borderBottom: '1.5px solid #ddd', paddingBottom: 4, marginBottom: 12 }}>
-              Languages
+              {L.languages}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 24px' }}>
               {cvData.languages.map((lang, i) => {

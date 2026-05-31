@@ -10,18 +10,22 @@ type Tab = 'donnees' | 'templates'
 interface Props {
   cvData: CVData | null
   photo: string | null
+  showPhoto: boolean
   activeTemplateId: string
   onUpdateCV: (data: CVData) => void
   onSetPhoto: (dataUrl: string | null) => void
+  onSetShowPhoto: (v: boolean) => void
   onSetTemplate: (id: string) => void
 }
 
 export default function LeftSidebar({
   cvData,
   photo,
+  showPhoto,
   activeTemplateId,
   onUpdateCV,
   onSetPhoto,
+  onSetShowPhoto,
   onSetTemplate,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('donnees')
@@ -55,6 +59,8 @@ export default function LeftSidebar({
             onUpdateCV={onUpdateCV}
             photo={photo}
             onSetPhoto={onSetPhoto}
+            showPhoto={showPhoto}
+            onSetShowPhoto={onSetShowPhoto}
           />
         ) : (
           <TemplateGallery

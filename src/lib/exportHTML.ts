@@ -126,7 +126,35 @@ export function generateCVHTML(cv: CVData): string {
 }
 
 export function downloadHTML(cv: CVData): void {
-  const html = generateCVHTML(cv)
+  const el = document.getElementById('cv-content')
+  if (!el) return
+
+  const linkTags = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'))
+    .map(l => l.outerHTML)
+    .join('\n  ')
+
+  const styleTags = Array.from(document.querySelectorAll('style'))
+    .map(s => s.outerHTML)
+    .join('\n  ')
+
+  const safeName = cv.name
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+  const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${safeName} — CV</title>
+  ${linkTags}
+  ${styleTags}
+  <style>html,body{margin:0;padding:0;background:#fff;}</style>
+</head>
+<body>
+  ${el.outerHTML}
+</body>
+</html>`
+
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

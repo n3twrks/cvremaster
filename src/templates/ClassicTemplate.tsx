@@ -1,8 +1,11 @@
 import { CVData } from '@/types/cv'
+import { getSectionLabels } from '@/lib/sectionLabels'
+import { ContactItem } from './utils'
 
-interface Props { cvData: CVData }
+interface Props { cvData: CVData; language?: string }
 
-export default function ClassicTemplate({ cvData }: Props) {
+export default function ClassicTemplate({ cvData, language }: Props) {
+  const L = getSectionLabels(language)
   return (
     <div
       id="cv-content"
@@ -28,7 +31,7 @@ export default function ClassicTemplate({ cvData }: Props) {
             {cvData.contact.length > 0 && (
               <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
                 {cvData.contact.map((c, i) => (
-                  <span key={i} className="text-sm font-mono text-[#6B6A66]">{c}</span>
+                  <ContactItem key={i} text={c} className="text-sm font-mono text-[#6B6A66]" />
                 ))}
               </div>
             )}
@@ -40,7 +43,7 @@ export default function ClassicTemplate({ cvData }: Props) {
       {cvData.summary && (
         <section className="mb-6">
           <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-2">
-            Résumé
+            {L.summary}
           </h2>
           <p className="text-[#1A1A18] text-sm font-body leading-relaxed">{cvData.summary}</p>
         </section>
@@ -50,7 +53,7 @@ export default function ClassicTemplate({ cvData }: Props) {
       {cvData.experience.length > 0 && (
         <section className="mb-6">
           <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-3">
-            Expérience
+            {L.experience}
           </h2>
           <div className="space-y-5">
             {cvData.experience.map((exp, i) => (
@@ -82,7 +85,7 @@ export default function ClassicTemplate({ cvData }: Props) {
       {cvData.education.length > 0 && (
         <section className="mb-6">
           <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-3">
-            Formation
+            {L.education}
           </h2>
           <div className="space-y-3">
             {cvData.education.map((edu, i) => (
@@ -104,13 +107,15 @@ export default function ClassicTemplate({ cvData }: Props) {
           {cvData.skills.length > 0 && (
             <div>
               <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-2">
-                Compétences
+                {L.skills}
               </h2>
               <div className="flex flex-wrap gap-1.5">
                 {cvData.skills.map((s, i) => (
-                  <span key={i} className="px-2 py-0.5 bg-[#F4F3F0] border border-[#E5E4E0] text-[#1A1A18] text-xs font-body rounded">
-                    {s}
-                  </span>
+                  s.startsWith('## ') ? (
+                    <div key={i} className="w-full mt-1 text-[11px] font-body font-medium text-[#1B4332]">{s.slice(3)}</div>
+                  ) : (
+                    <span key={i} className="px-2 py-0.5 bg-[#F4F3F0] border border-[#E5E4E0] text-[#1A1A18] text-xs font-body rounded">{s}</span>
+                  )
                 ))}
               </div>
             </div>
@@ -118,7 +123,7 @@ export default function ClassicTemplate({ cvData }: Props) {
           {cvData.languages.length > 0 && (
             <div>
               <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-2">
-                Langues
+                {L.languages}
               </h2>
               <div className="flex flex-wrap gap-1.5">
                 {cvData.languages.map((l, i) => (
@@ -136,7 +141,7 @@ export default function ClassicTemplate({ cvData }: Props) {
       {cvData.hobbies && cvData.hobbies.length > 0 && (
         <section>
           <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-2">
-            Hobbies & Passions
+            {L.hobbies}
           </h2>
           <div className="flex flex-wrap gap-1.5">
             {cvData.hobbies.map((h, i) => (

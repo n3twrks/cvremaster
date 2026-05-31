@@ -1,12 +1,14 @@
 import { CVData } from '@/types/cv'
-import { langScore, SegmentBar } from './utils'
+import { getSectionLabels } from '@/lib/sectionLabels'
+import { langScore, SegmentBar, ContactItem } from './utils'
 
-interface Props { cvData: CVData }
+interface Props { cvData: CVData; language?: string }
 
 const TEAL = '#3DBDB3'
 const TEAL_DARK = '#2A9D94'
 
-export default function TealHorizontalTemplate({ cvData }: Props) {
+export default function TealHorizontalTemplate({ cvData, language }: Props) {
+  const L = getSectionLabels(language)
   return (
     <div
       id="cv-content"
@@ -43,7 +45,8 @@ export default function TealHorizontalTemplate({ cvData }: Props) {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {cvData.contact.map((c, i) => (
                 <span key={i} style={{ fontSize: 11, color: '#666', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ color: TEAL, fontSize: 8 }}>◆</span> {c}
+                  <span style={{ color: TEAL, fontSize: 8 }}>◆</span>
+                  <ContactItem text={c} style={{ color: '#666' }} />
                 </span>
               ))}
             </div>
@@ -56,14 +59,14 @@ export default function TealHorizontalTemplate({ cvData }: Props) {
 
         {/* Summary */}
         {cvData.summary && (
-          <Row label="Personal Summary" teal={TEAL}>
+          <Row label={L.summary} teal={TEAL}>
             <p style={{ fontSize: 12, color: '#555', lineHeight: 1.7 }}>{cvData.summary}</p>
           </Row>
         )}
 
         {/* Experience */}
         {cvData.experience.length > 0 && (
-          <Row label="Work Experience" teal={TEAL}>
+          <Row label={L.experience} teal={TEAL}>
             {cvData.experience.map((exp, i) => (
               <div key={i} className="entry">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
@@ -94,7 +97,7 @@ export default function TealHorizontalTemplate({ cvData }: Props) {
 
         {/* Education */}
         {cvData.education.length > 0 && (
-          <Row label="Education" teal={TEAL}>
+          <Row label={L.education} teal={TEAL}>
             {cvData.education.map((edu, i) => (
               <div key={i} className="entry" style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 12, fontStyle: 'italic', color: '#555' }}>
@@ -108,13 +111,17 @@ export default function TealHorizontalTemplate({ cvData }: Props) {
 
         {/* Skills */}
         {cvData.skills.length > 0 && (
-          <Row label="Skills" teal={TEAL}>
+          <Row label={L.skills} teal={TEAL}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
               {cvData.skills.map((s, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: TEAL, fontSize: 8 }}>•</span>
-                  <span style={{ fontSize: 11, color: '#555' }}>{s}</span>
-                </div>
+                s.startsWith('## ') ? (
+                  <div key={i} style={{ gridColumn: '1 / -1', fontSize: 10, fontWeight: 700, color: TEAL, textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 }}>{s.slice(3)}</div>
+                ) : (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: TEAL, fontSize: 8 }}>•</span>
+                    <span style={{ fontSize: 11, color: '#555' }}>{s}</span>
+                  </div>
+                )
               ))}
             </div>
           </Row>
@@ -122,7 +129,7 @@ export default function TealHorizontalTemplate({ cvData }: Props) {
 
         {/* Languages */}
         {cvData.languages.length > 0 && (
-          <Row label="Languages" teal={TEAL}>
+          <Row label={L.languages} teal={TEAL}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 32px' }}>
               {cvData.languages.map((lang, i) => {
                 const parts = lang.split(/[\-–—]/).map(s => s.trim())
@@ -144,7 +151,7 @@ export default function TealHorizontalTemplate({ cvData }: Props) {
 
         {/* Hobbies */}
         {cvData.hobbies && cvData.hobbies.length > 0 && (
-          <Row label="Hobbies" teal={TEAL}>
+          <Row label={L.hobbies} teal={TEAL}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {cvData.hobbies.map((h, i) => (
                 <span key={i} style={{ fontSize: 11, color: '#555', display: 'flex', alignItems: 'center', gap: 4 }}>

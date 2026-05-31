@@ -1,12 +1,15 @@
 import { CVData } from '@/types/cv'
+import { getSectionLabels } from '@/lib/sectionLabels'
+import { ContactItem } from './utils'
 
-interface Props { cvData: CVData }
+interface Props { cvData: CVData; language?: string }
 
 const NAVY = '#2B3547'
 const NAVY_TEXT = '#FFFFFF'
 const NAVY_MUTED = '#94A3B8'
 
-export default function NavyDarkTemplate({ cvData }: Props) {
+export default function NavyDarkTemplate({ cvData, language }: Props) {
+  const L = getSectionLabels(language)
   return (
     <div
       id="cv-content"
@@ -15,36 +18,29 @@ export default function NavyDarkTemplate({ cvData }: Props) {
     >
       {/* Left sidebar */}
       <div style={{ width: '30%', background: NAVY, color: NAVY_TEXT, padding: '32px 18px', flexShrink: 0 }}>
-        {/* Circular photo */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-          {cvData.photo ? (
+        {/* Circular photo — hidden entirely when not set */}
+        {cvData.photo && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
             <img
               src={cvData.photo}
               alt="Photo"
               style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${NAVY_MUTED}` }}
             />
-          ) : (
-            <div style={{ width: 90, height: 90, borderRadius: '50%', background: '#3D4F68', display: 'flex', alignItems: 'center', justifyContent: 'center', border: `3px solid ${NAVY_MUTED}` }}>
-              <svg width="36" height="36" viewBox="0 0 48 48" fill="none">
-                <circle cx="24" cy="18" r="10" stroke={NAVY_MUTED} strokeWidth="2" />
-                <path d="M6 42c0-10 8-16 18-16s18 6 18 16" stroke={NAVY_MUTED} strokeWidth="2" strokeLinecap="round" />
-              </svg>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Contact */}
         {cvData.contact.length > 0 && (
-          <SideSection title="Contact" navy={NAVY} muted={NAVY_MUTED}>
+          <SideSection title={L.contact} navy={NAVY} muted={NAVY_MUTED}>
             {cvData.contact.map((c, i) => (
-              <div key={i} style={{ fontSize: 10, color: NAVY_MUTED, marginBottom: 5, lineHeight: 1.4 }}>{c}</div>
+              <ContactItem key={i} text={c} style={{ display: 'block', fontSize: 10, color: NAVY_MUTED, marginBottom: 5, lineHeight: 1.4 }} />
             ))}
           </SideSection>
         )}
 
         {/* Education */}
         {cvData.education.length > 0 && (
-          <SideSection title="Education" navy={NAVY} muted={NAVY_MUTED}>
+          <SideSection title={L.education} navy={NAVY} muted={NAVY_MUTED}>
             {cvData.education.map((edu, i) => (
               <div key={i} style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 10, color: NAVY_MUTED }}>{edu.date}</div>
@@ -57,19 +53,23 @@ export default function NavyDarkTemplate({ cvData }: Props) {
 
         {/* Skills */}
         {cvData.skills.length > 0 && (
-          <SideSection title="Expertise" navy={NAVY} muted={NAVY_MUTED}>
+          <SideSection title={L.expertise} navy={NAVY} muted={NAVY_MUTED}>
             {cvData.skills.map((s, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <span style={{ color: NAVY_MUTED, fontSize: 8 }}>•</span>
-                <span style={{ fontSize: 10, color: NAVY_MUTED }}>{s}</span>
-              </div>
+              s.startsWith('## ') ? (
+                <div key={i} style={{ fontSize: 9, fontWeight: 700, color: NAVY_TEXT, textTransform: 'uppercase', letterSpacing: 1, marginTop: 6, marginBottom: 2 }}>{s.slice(3)}</div>
+              ) : (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{ color: NAVY_MUTED, fontSize: 8 }}>•</span>
+                  <span style={{ fontSize: 10, color: NAVY_MUTED }}>{s}</span>
+                </div>
+              )
             ))}
           </SideSection>
         )}
 
         {/* Languages */}
         {cvData.languages.length > 0 && (
-          <SideSection title="Language" navy={NAVY} muted={NAVY_MUTED}>
+          <SideSection title={L.languages} navy={NAVY} muted={NAVY_MUTED}>
             {cvData.languages.map((l, i) => (
               <div key={i} style={{ fontSize: 10, color: NAVY_MUTED, marginBottom: 4 }}>{l}</div>
             ))}
@@ -78,7 +78,7 @@ export default function NavyDarkTemplate({ cvData }: Props) {
 
         {/* Hobbies */}
         {cvData.hobbies && cvData.hobbies.length > 0 && (
-          <SideSection title="Interests" navy={NAVY} muted={NAVY_MUTED}>
+          <SideSection title={L.hobbies} navy={NAVY} muted={NAVY_MUTED}>
             {cvData.hobbies.map((h, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                 <span style={{ color: NAVY_MUTED, fontSize: 8 }}>•</span>
@@ -108,7 +108,7 @@ export default function NavyDarkTemplate({ cvData }: Props) {
         {cvData.experience.length > 0 && (
           <div style={{ marginBottom: 24 }}>
             <div style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5, color: NAVY, marginBottom: 14 }}>
-              Experience
+              {L.experience}
             </div>
             {cvData.experience.map((exp, i) => (
               <div key={i} className="entry" style={{ display: 'flex', gap: 12, marginBottom: 16 }}>

@@ -2,9 +2,10 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { CVData, CVAnalysis, Message, SectionAnalysis } from '@/types/cv'
-import { extractJSONUpdate } from '@/lib/parseAIResponse'
+import { extractJSONUpdate, extractPatchUpdate, applyPatch } from '@/lib/parseAIResponse'
 import { saveAnalysis, loadAnalysis } from '@/lib/analysisStorage'
 import ApiKeyBanner from './ApiKeyBanner'
+import { Sparkles, Loader2, RotateCcw, Link2, Bookmark, BookmarkCheck, ChevronDown, X, ArrowRight } from 'lucide-react'
 
 type Tab = 'chat' | 'analyser'
 
@@ -17,6 +18,9 @@ interface Props {
   setIsLoading: (v: boolean) => void
 }
 
+// Exposed so other components can trigger a chat message externally
+export type SidebarRef = { sendMessage: (text: string) => void; switchToChat: () => void }
+
 export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoading }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('chat')
 
@@ -25,15 +29,14 @@ export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMe
       id="sidebar"
       className="!w-[400px] shrink-0 flex flex-col bg-[#FAFAF8] border-l border-[#E5E4E0] h-full"
     >
-      {/* Logo + tabs */}
-      <div className="px-5 py-4 border-b border-[#E5E4E0]">
-        <span className="font-display text-xl text-[#1A1A18] block mb-3">CVRemaster</span>
+      {/* Tabs */}
+      <div className="px-5 py-3 border-b border-[#E5E4E0]">
         <div className="flex gap-1">
           {(['chat', 'analyser'] as Tab[]).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-1.5 rounded-md text-sm font-body font-medium transition-colors duration-150 capitalize ${
+              className={`flex-1 py-1.5 rounded-md text-sm font-body font-medium transition-colors duration-150 ${
                 activeTab === tab
                   ? 'bg-[#1B4332] text-[#FAFAF8]'
                   : 'text-[#6B6A66] hover:text-[#1A1A18] hover:bg-[#F4F3F0]'
@@ -57,7 +60,14 @@ export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMe
           setIsLoading={setIsLoading}
         />
       ) : (
-        <AnalyserTab cvData={cvData} />
+        <AnalyserTab
+          cvData={cvData}
+          onApplyRec={(rec) => {
+            setActiveTab('chat')
+            // Signal to ChatTab via addMessage — ChatTab picks it up via pendingMessage
+            addMessage('__apply__' as Message['role'], rec)
+          }}
+        />
       )}
     </aside>
   )
@@ -65,18 +75,43 @@ export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMe
 
 /* ── Chat tab ── */
 
+const SYSTEM_PROMPT = `Tu es un expert en rédaction de CV. Tu as accès aux données actuelles en JSON.
+
+RÈGLES DE RÉPONSE :
+1. Pour modifier UN ou QUELQUES champs ciblés : commence par PATCH_UPDATE: suivi d'un tableau JSON.
+   Format : PATCH_UPDATE: [{"path": "champ", "value": "nouvelle valeur"}, ...]
+   Chemins valides : "name", "tagline", "summary", "contact.N", "skills.N", "languages.N", "hobbies.N",
+   "experience.N.title", "experience.N.company", "experience.N.location", "experience.N.date", "experience.N.bullets.N",
+   "education.N.degree", "education.N.school", "education.N.date"
+   (remplace N par l'index 0, 1, 2…)
+2. Pour restructurer entièrement le CV ou le créer depuis zéro : commence par JSON_UPDATE: suivi du JSON complet.
+   Structure : { name, tagline, contact[], summary, experience[{title,company,location,date,bullets[]}], education[{school,degree,date}], skills[], languages[], hobbies[] }
+3. Pour une question ou conseil général : réponds normalement en texte.
+
+RÈGLE DE LANGUE : Détecte la langue principale du CV (champs name, summary, experience, etc.) et réponds et écris les modifications dans cette même langue. Si le CV est en anglais, réponds en anglais et modifie le contenu en anglais. Si en français, en français.`
+
 function ChatTab({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoading }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const lastApplyRef = useRef<string | null>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  async function send() {
-    const text = input.trim()
-    if (!text || isLoading) return
-    setInput('')
+  // Watch for __apply__ messages injected by AnalyserTab (ref guards against StrictMode double-fire)
+  useEffect(() => {
+    const last = messages[messages.length - 1]
+    if (last?.role === ('__apply__' as Message['role']) && last.content !== lastApplyRef.current) {
+      lastApplyRef.current = last.content
+      const text = `Améliore la section correspondante selon cette recommandation : "${last.content}"`
+      sendText(text)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages])
+
+  async function sendText(text: string) {
+    if (!text.trim() || isLoading) return
     addMessage('user', text)
     addMessage('thinking', 'L\'IA réfléchit…')
     setIsLoading(true)
@@ -86,21 +121,30 @@ function ChatTab({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoa
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system:
-            'Tu es un expert en rédaction de CV. Tu as accès aux données actuelles en JSON. Pour une modification, commence ta réponse par JSON_UPDATE: suivi du JSON complet mis à jour. Pour une question générale, réponds normalement en texte. Structure JSON : { name, tagline, contact[], summary, experience[{title, company, location, date, bullets[]}], education[{school, degree, date}], skills[], languages[], hobbies[] }',
+          system: SYSTEM_PROMPT,
           user: `CV actuel : ${JSON.stringify(cvData ?? {})}\n\nDemande : ${text}`,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erreur API')
+
       const result: string = data.result
+
+      const patches = extractPatchUpdate(result)
+      if (patches) {
+        if (cvData) onUpdateCV(applyPatch(cvData, patches))
+        addMessage('assistant', `✓ CV mis à jour (${patches.length} champ${patches.length > 1 ? 's' : ''} modifié${patches.length > 1 ? 's' : ''}).`)
+        return
+      }
+
       const updated = extractJSONUpdate(result)
       if (updated) {
         onUpdateCV(updated)
-        addMessage('assistant', 'CV mis à jour.')
-      } else {
-        addMessage('assistant', result)
+        addMessage('assistant', '✓ CV entièrement restructuré.')
+        return
       }
+
+      addMessage('assistant', result)
     } catch (err) {
       addMessage('assistant', `Erreur : ${err instanceof Error ? err.message : 'inconnu'}`)
     } finally {
@@ -108,10 +152,19 @@ function ChatTab({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoa
     }
   }
 
+  function send() {
+    const text = input.trim()
+    if (!text) return
+    setInput('')
+    sendText(text)
+  }
+
   return (
     <>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-        {messages.map((msg, i) => <MessageBubble key={i} msg={msg} />)}
+        {messages
+          .filter(m => m.role !== ('__apply__' as Message['role']))
+          .map((msg, i) => <MessageBubble key={i} msg={msg} />)}
         {isLoading && (
           <div className="flex gap-1 items-center text-[#9D9C98] text-xs font-body">
             <span className="animate-pulse">●</span>
@@ -127,7 +180,7 @@ function ChatTab({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoa
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
-            placeholder="Décrivez une modification… (Entrée pour envoyer)"
+            placeholder="Ex : Reformule mon résumé, améliore les bullets de mon dernier poste…"
             rows={3}
             className="w-full resize-none rounded-md border border-[#CCCBC6] bg-white px-3 py-2 text-sm font-body text-[#1A1A18] placeholder-[#9D9C98] focus:outline-none focus:border-[#1B4332] transition-colors duration-150"
           />
@@ -151,7 +204,7 @@ function MessageBubble({ msg }: { msg: Message }) {
   }
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[220px] px-3 py-2 rounded-lg text-sm font-body leading-snug ${isUser ? 'bg-[#1B4332] text-[#FAFAF8]' : 'bg-white border border-[#E5E4E0] text-[#1A1A18]'}`}>
+      <div className={`max-w-[280px] px-3 py-2 rounded-lg text-sm font-body leading-snug ${isUser ? 'bg-[#1B4332] text-[#FAFAF8]' : 'bg-white border border-[#E5E4E0] text-[#1A1A18]'}`}>
         {msg.content}
       </div>
     </div>
@@ -167,11 +220,40 @@ const SCORE_LABELS: Record<keyof CVAnalysis['scores'], string> = {
   coherence: 'Cohérence',
 }
 
-function AnalyserTab({ cvData }: { cvData: CVData | null }) {
+function AnalyserTab({ cvData, onApplyRec }: { cvData: CVData | null; onApplyRec: (rec: string) => void }) {
   const [analysis, setAnalysis] = useState<CVAnalysis | null>(() => loadAnalysis())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string | null>(null)
+  const [rescoringSection, setRescoringSection] = useState<string | null>(null)
+
+  async function rescoreSection(section: SectionAnalysis) {
+    if (!cvData || !analysis) return
+    setRescoringSection(section.name)
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: `Tu es un expert coach CV. Analyse UNIQUEMENT la section "${section.name}" du CV fourni. Retourne UNIQUEMENT un objet JSON (sans backticks) : {"name": "${section.name}", "score": number (0-100), "comment": string, "suggestions": string[]}`,
+          user: `CV :\n${JSON.stringify(cvData, null, 2)}\n\nRéanalyse la section "${section.name}".`,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      let raw = data.result.trim()
+      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]+?)\s*```/)
+      if (fenceMatch) raw = fenceMatch[1].trim()
+      const start = raw.indexOf('{'); const end = raw.lastIndexOf('}')
+      if (start !== -1 && end > start) raw = raw.slice(start, end + 1)
+      const updated = JSON.parse(raw) as SectionAnalysis
+      const newAnalysis = { ...analysis, sections: analysis.sections.map(s => s.name === section.name ? updated : s) }
+      setAnalysis(newAnalysis)
+      saveAnalysis(newAnalysis)
+    } catch { /* silent fail */ } finally {
+      setRescoringSection(null)
+    }
+  }
 
   async function runAnalysis() {
     if (!cvData) return
@@ -190,12 +272,6 @@ function AnalyserTab({ cvData }: { cvData: CVData | null }) {
   "skills": { "present": string[], "toHighlight": string[], "missing": string[] },
   "recommendations": string[]
 }
-Critères de scoring (0-100) :
-- wording : qualité du langage, verbes d'action forts, précision
-- length : sections ni trop courtes ni trop longues, bullets concis
-- impact : résultats quantifiés, achievements mesurables
-- coherence : progression logique, cohérence compétences/expériences
-Pour "skills.missing", suggère des compétences pertinentes absentes.
 Réponds en français.`,
           user: `CV à analyser :\n\n${JSON.stringify(cvData, null, 2)}`,
         }),
@@ -239,17 +315,9 @@ Réponds en français.`,
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#E8A838] text-[#1A1A18] text-xs font-body font-medium hover:bg-[#D4962E] transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {loading ? (
-            <>
-              <span className="inline-block w-3 h-3 border border-[#1A1A18] border-t-transparent rounded-full animate-spin" />
-              Analyse…
-            </>
+            <><Loader2 size={12} className="animate-spin" />Analyse…</>
           ) : (
-            <>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M6 1v2M6 9v2M1 6h2M9 6h2M2.93 2.93l1.41 1.41M7.66 7.66l1.41 1.41M2.93 9.07l1.41-1.41M7.66 4.34l1.41-1.41" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-              </svg>
-              Analyser
-            </>
+            <><Sparkles size={12} />Analyser</>
           )}
         </button>
       </div>
@@ -258,17 +326,12 @@ Réponds en français.`,
         {!analysis && !loading && !error && (
           <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-[#FDF3DC] flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#E8A838]">
-                <path d="M9 17H7A5 5 0 017 7h2M15 7h2a5 5 0 010 10h-2M8 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <Link2 size={24} className="text-[#E8A838]" />
             </div>
             <p className="text-sm text-[#6B6A66] font-body">Cliquez sur Analyser pour obtenir un scoring et des recommandations IA.</p>
           </div>
         )}
-
-        {error && (
-          <div className="px-3 py-2 rounded-md bg-red-50 border border-red-200 text-sm text-red-700 font-body">{error}</div>
-        )}
+        {error && <div className="px-3 py-2 rounded-md bg-red-50 border border-red-200 text-sm text-red-700 font-body">{error}</div>}
 
         {analysis && (
           <>
@@ -298,12 +361,14 @@ Réponds en français.`,
               <div>
                 <h3 className="uppercase tracking-widest text-[10px] font-body font-medium text-[#9D9C98] mb-2">Analyse par section</h3>
                 <div className="space-y-1">
-                  {analysis.sections.map((s) => (
+                  {analysis.sections.map(s => (
                     <SectionCard
                       key={s.name}
                       section={s}
                       open={openSection === s.name}
                       onToggle={() => setOpenSection(openSection === s.name ? null : s.name)}
+                      onRescore={() => rescoreSection(s)}
+                      isRescoring={rescoringSection === s.name}
                     />
                   ))}
                 </div>
@@ -317,9 +382,7 @@ Réponds en français.`,
                   <div className="mb-2">
                     <p className="text-[11px] text-[#1B4332] font-body font-medium mb-1">À mettre en avant</p>
                     <div className="flex flex-wrap gap-1">
-                      {analysis.skills.toHighlight.map((s, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-[#D8EDDF] border border-[#A7D9B8] text-[#1B4332] text-[11px] font-body rounded">{s}</span>
-                      ))}
+                      {analysis.skills.toHighlight.map((s, i) => <span key={i} className="px-2 py-0.5 bg-[#D8EDDF] border border-[#A7D9B8] text-[#1B4332] text-[11px] font-body rounded">{s}</span>)}
                     </div>
                   </div>
                 )}
@@ -327,9 +390,7 @@ Réponds en français.`,
                   <div>
                     <p className="text-[11px] text-[#B45309] font-body font-medium mb-1">Manquantes / à ajouter</p>
                     <div className="flex flex-wrap gap-1">
-                      {analysis.skills.missing.map((s, i) => (
-                        <span key={i} className="px-2 py-0.5 bg-[#FDF3DC] border border-[#E8A838] text-[#B45309] text-[11px] font-body rounded">{s}</span>
-                      ))}
+                      {analysis.skills.missing.map((s, i) => <span key={i} className="px-2 py-0.5 bg-[#FDF3DC] border border-[#E8A838] text-[#B45309] text-[11px] font-body rounded">{s}</span>)}
                     </div>
                   </div>
                 )}
@@ -345,14 +406,24 @@ Réponds en français.`,
                     return (
                       <div key={i} className={`flex items-start gap-2 px-3 py-2.5 rounded-lg border text-xs font-body leading-snug transition-colors duration-150 ${saved ? 'bg-[#D8EDDF] border-[#A7D9B8] text-[#1B4332]' : 'bg-white border-[#E5E4E0] text-[#1A1A18]'}`}>
                         <span className="flex-1">{rec}</span>
-                        <button
-                          onClick={() => toggleSaveRec(rec)}
-                          className={`shrink-0 w-5 h-5 flex items-center justify-center rounded transition-colors ${saved ? 'text-[#1B4332]' : 'text-[#9D9C98] hover:text-[#1B4332]'}`}
-                        >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill={saved ? 'currentColor' : 'none'}>
-                            <path d="M2 1h8a1 1 0 011 1v9l-5-2.5L1 11V2a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
-                          </svg>
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {/* Apply button */}
+                          <button
+                            onClick={() => onApplyRec(rec)}
+                            className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#1B4332] hover:text-white text-[#1B4332] transition-colors"
+                            title="Appliquer via le chat"
+                          >
+                            <ArrowRight size={11} />
+                          </button>
+                          {/* Save button */}
+                          <button
+                            onClick={() => toggleSaveRec(rec)}
+                            className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${saved ? 'text-[#1B4332]' : 'text-[#9D9C98] hover:text-[#1B4332]'}`}
+                            title={saved ? 'Retirer' : 'Enregistrer'}
+                          >
+                            {saved ? <BookmarkCheck size={11} /> : <Bookmark size={11} />}
+                          </button>
+                        </div>
                       </div>
                     )
                   })}
@@ -370,9 +441,7 @@ Réponds en français.`,
                     <div key={i} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-[#D8EDDF] border border-[#A7D9B8] text-xs font-body text-[#1B4332] leading-snug">
                       <span className="flex-1">{rec}</span>
                       <button onClick={() => toggleSaveRec(rec)} className="shrink-0 text-[#1B4332] hover:text-[#9B1C1C] transition-colors">
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                        </svg>
+                        <X size={10} />
                       </button>
                     </div>
                   ))}
@@ -401,9 +470,7 @@ function ScoreRing({ score, size }: { score: number; size: number }) {
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: 'stroke-dasharray 0.6s ease' }}
       />
-      <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="16" fontWeight="500" fill={color} fontFamily="DM Mono, monospace">
-        {score}
-      </text>
+      <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="16" fontWeight="500" fill={color} fontFamily="DM Mono, monospace">{score}</text>
     </svg>
   )
 }
@@ -423,21 +490,45 @@ function scoreColor(score: number) {
   return 'text-[#9B1C1C]'
 }
 
-function SectionCard({ section, open, onToggle }: { section: SectionAnalysis; open: boolean; onToggle: () => void }) {
+function SectionCard({ section, open, onToggle, onRescore, isRescoring }: {
+  section: SectionAnalysis
+  open: boolean
+  onToggle: () => void
+  onRescore?: () => void
+  isRescoring?: boolean
+}) {
   return (
     <div className="border border-[#E5E4E0] rounded-lg bg-white overflow-hidden">
-      <button onClick={onToggle} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#FAFAF8] transition-colors duration-100">
+      <div
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={e => e.key === 'Enter' && onToggle()}
+        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#FAFAF8] transition-colors duration-100 cursor-pointer"
+      >
         <div className="flex items-center gap-2">
           <span className={`text-[11px] font-mono font-medium ${scoreColor(section.score)}`}>{section.score}</span>
           <span className="text-xs font-body text-[#1A1A18]">{section.name}</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-16"><ScoreBar score={section.score} /></div>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`text-[#9D9C98] transition-transform duration-150 ${open ? 'rotate-180' : ''}`}>
-            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          {onRescore && (
+            <button
+              onClick={e => { e.stopPropagation(); onRescore() }}
+              disabled={isRescoring}
+              className="w-5 h-5 flex items-center justify-center text-[#9D9C98] hover:text-[#E8A838] transition-colors disabled:opacity-40"
+              title="Re-scorer cette section"
+            >
+              {isRescoring ? (
+                <Loader2 size={11} className="animate-spin text-[#E8A838]" />
+              ) : (
+                <RotateCcw size={11} />
+              )}
+            </button>
+          )}
+          <ChevronDown size={12} className={`text-[#9D9C98] transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
         </div>
-      </button>
+      </div>
       {open && (
         <div className="px-3 pb-3 border-t border-[#F4F3F0]">
           <p className="text-[11px] font-body text-[#6B6A66] mt-2 leading-snug">{section.comment}</p>

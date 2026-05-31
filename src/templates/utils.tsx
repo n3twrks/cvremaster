@@ -1,3 +1,33 @@
+/** Return an href for a contact string, or null if it's plain text */
+export function contactHref(c: string): string | null {
+  const t = c.trim()
+  if (/^https?:\/\//i.test(t)) return t
+  if (/^[\w.%+\-]+@[\w.\-]+\.[a-z]{2,}$/i.test(t)) return `mailto:${t}`
+  if (/linkedin\.com/i.test(t)) return `https://${t.replace(/^https?:\/\//i, '')}`
+  if (/github\.com/i.test(t)) return `https://${t.replace(/^https?:\/\//i, '')}`
+  return null
+}
+
+/** Render a contact item as a link if it looks like a URL/email, otherwise plain */
+export function ContactItem({
+  text,
+  style,
+  className,
+}: {
+  text: string
+  style?: React.CSSProperties
+  className?: string
+}) {
+  const href = contactHref(text)
+  return href ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none', ...style }} className={className}>
+      {text}
+    </a>
+  ) : (
+    <span style={style} className={className}>{text}</span>
+  )
+}
+
 /** Map a language string containing a CEFR level or keyword to a 0–5 score */
 export function langScore(lang: string): number {
   const l = lang.toLowerCase()

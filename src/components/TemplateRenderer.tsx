@@ -9,15 +9,16 @@ import PastelSidebarTemplate from '@/templates/PastelSidebarTemplate'
 interface Props {
   cvData: CVData
   templateId: string
+  language?: string
 }
 
-export default function TemplateRenderer({ cvData, templateId }: Props) {
+export default function TemplateRenderer({ cvData, templateId, language }: Props) {
   switch (templateId) {
-    case 'sidebar-dark':     return <SidebarDarkTemplate cvData={cvData} />
-    case 'teal-horizontal':  return <TealHorizontalTemplate cvData={cvData} />
-    case 'teal-sidebar':     return <TealSidebarTemplate cvData={cvData} />
-    case 'navy-dark':        return <NavyDarkTemplate cvData={cvData} />
-    case 'pastel-sidebar':   return <PastelSidebarTemplate cvData={cvData} />
-    default:                 return <ClassicTemplate cvData={cvData} />
+    case 'sidebar-dark':     return <SidebarDarkTemplate cvData={cvData} language={language} />
+    case 'teal-horizontal':  return <TealHorizontalTemplate cvData={cvData} language={language} />
+    case 'teal-sidebar':     return <TealSidebarTemplate cvData={cvData} language={language} />
+    case 'navy-dark':        return <NavyDarkTemplate cvData={cvData} language={language} />
+    case 'pastel-sidebar':   return <PastelSidebarTemplate cvData={cvData} language={language} />
+    default:                 return <ClassicTemplate cvData={cvData} language={language} />
   }
 }

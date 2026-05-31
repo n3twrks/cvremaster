@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { CVData, CVAnalysis, SectionAnalysis } from '@/types/cv'
 import { saveAnalysis, loadAnalysis } from '@/lib/analysisStorage'
+import { Sparkles, Loader2, Link2, Bookmark, BookmarkCheck, ChevronDown, X } from 'lucide-react'
 
 interface Props {
   cvData: CVData | null
@@ -105,14 +106,12 @@ Réponds en français.`,
           >
             {loading ? (
               <>
-                <span className="inline-block w-3 h-3 border border-[#1A1A18] border-t-transparent rounded-full animate-spin" />
+                <Loader2 size={12} className="animate-spin" />
                 Analyse…
               </>
             ) : (
               <>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M6 1v2M6 9v2M1 6h2M9 6h2M2.93 2.93l1.41 1.41M7.66 7.66l1.41 1.41M2.93 9.07l1.41-1.41M7.66 4.34l1.41-1.41" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                </svg>
+                <Sparkles size={12} />
                 Analyser
               </>
             )}
@@ -122,9 +121,7 @@ Réponds en français.`,
             className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-[#F4F3F0] text-[#6B6A66] transition-colors duration-150"
             aria-label="Fermer l'analyse"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <X size={14} />
           </button>
         </div>
       </div>
@@ -134,9 +131,7 @@ Réponds en français.`,
         {!analysis && !loading && !error && (
           <div className="flex flex-col items-center justify-center h-48 text-center gap-3">
             <div className="w-12 h-12 rounded-lg bg-[#FDF3DC] flex items-center justify-center">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#E8A838]">
-                <path d="M9 17H7A5 5 0 017 7h2M15 7h2a5 5 0 010 10h-2M8 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
+              <Link2 size={24} className="text-[#E8A838]" />
             </div>
             <p className="text-sm text-[#6B6A66] font-body">Cliquez sur Analyser pour obtenir un scoring et des recommandations IA.</p>
           </div>
@@ -237,9 +232,7 @@ Réponds en français.`,
                           className={`shrink-0 w-5 h-5 flex items-center justify-center rounded transition-colors duration-150 ${saved ? 'text-[#1B4332]' : 'text-[#9D9C98] hover:text-[#1B4332]'}`}
                           title={saved ? 'Retirer' : 'Enregistrer'}
                         >
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill={saved ? 'currentColor' : 'none'}>
-                            <path d="M2 1h8a1 1 0 011 1v9l-5-2.5L1 11V2a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-                          </svg>
+                          {saved ? <BookmarkCheck size={12} /> : <Bookmark size={12} />}
                         </button>
                       </div>
                     )
@@ -263,9 +256,7 @@ Réponds en français.`,
                         className="shrink-0 text-[#1B4332] hover:text-[#9B1C1C] transition-colors duration-150"
                         title="Retirer"
                       >
-                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                          <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-                        </svg>
+                        <X size={10} />
                       </button>
                     </div>
                   ))}
@@ -333,12 +324,7 @@ function SectionCard({ section, open, onToggle }: { section: SectionAnalysis; op
         </div>
         <div className="flex items-center gap-2">
           <ScoreBar score={section.score} />
-          <svg
-            width="12" height="12" viewBox="0 0 12 12" fill="none"
-            className={`text-[#9D9C98] transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
-          >
-            <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <ChevronDown size={12} className={`text-[#9D9C98] transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
         </div>
       </button>
       {open && (
