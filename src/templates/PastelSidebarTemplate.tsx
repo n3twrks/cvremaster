@@ -74,7 +74,7 @@ export default function PastelSidebarTemplate({ cvData, language }: Props) {
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#444', marginBottom: 6 }}>
               {L.skills}
             </div>
-            <div style={{ fontSize: 9, fontWeight: 600, color: ACCENT, marginBottom: 6 }}>// PROFESSIONAL</div>
+            <div style={{ fontSize: 9, fontWeight: 600, color: ACCENT, marginBottom: 6 }}>{'// PROFESSIONAL'}</div>
             {cvData.skills.map((s, i) => (
               s.startsWith('## ') ? (
                 <div key={i} style={{ fontSize: 9, fontWeight: 700, color: ACCENT, textTransform: 'uppercase', letterSpacing: 1, marginTop: 6 }}>{s.slice(3)}</div>

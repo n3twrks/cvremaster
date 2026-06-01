@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { CVData, CVAnalysis, SectionAnalysis } from '@/types/cv'
 import { saveAnalysis, loadAnalysis } from '@/lib/analysisStorage'
 import { Sparkles, Loader2, Link2, Bookmark, BookmarkCheck, ChevronDown, X } from 'lucide-react'
@@ -18,15 +18,10 @@ const SCORE_LABELS: Record<keyof CVAnalysis['scores'], string> = {
 }
 
 export default function AnalysisPanel({ cvData, onClose }: Props) {
-  const [analysis, setAnalysis] = useState<CVAnalysis | null>(null)
+  const [analysis, setAnalysis] = useState<CVAnalysis | null>(() => loadAnalysis())
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string | null>(null)
-
-  useEffect(() => {
-    const saved = loadAnalysis()
-    if (saved) setAnalysis(saved)
-  }, [])
 
   async function runAnalysis() {
     if (!cvData) return

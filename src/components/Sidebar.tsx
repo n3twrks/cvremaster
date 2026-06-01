@@ -4,15 +4,18 @@ import { useRef, useEffect, useState } from 'react'
 import { CVData, CVAnalysis, Message, SectionAnalysis } from '@/types/cv'
 import { extractJSONUpdate, extractPatchUpdate, applyPatch } from '@/lib/parseAIResponse'
 import { saveAnalysis, loadAnalysis } from '@/lib/analysisStorage'
+import { loadContextPack } from '@/lib/contextStorage'
 import ApiKeyBanner from './ApiKeyBanner'
+import VoiceContextPanel from './VoiceContext/VoiceContextPanel'
 import { Sparkles, Loader2, RotateCcw, Link2, Bookmark, BookmarkCheck, ChevronDown, X, ArrowRight } from 'lucide-react'
 
-type Tab = 'chat' | 'analyser'
+type Tab = 'chat' | 'analyser' | 'voice'
 
 interface Props {
   messages: Message[]
   isLoading: boolean
   cvData: CVData | null
+  projectId?: string
   onUpdateCV: (data: CVData) => void
   addMessage: (role: Message['role'], content: string) => void
   setIsLoading: (v: boolean) => void
@@ -21,7 +24,7 @@ interface Props {
 // Exposed so other components can trigger a chat message externally
 export type SidebarRef = { sendMessage: (text: string) => void; switchToChat: () => void }
 
-export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoading }: Props) {
+export default function Sidebar({ messages, isLoading, cvData, projectId, onUpdateCV, addMessage, setIsLoading }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('chat')
 
   return (
@@ -32,7 +35,7 @@ export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMe
       {/* Tabs */}
       <div className="px-5 py-3 border-b border-[#E5E4E0]">
         <div className="flex gap-1">
-          {(['chat', 'analyser'] as Tab[]).map(tab => (
+          {(['chat', 'analyser', 'voice'] as Tab[]).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -42,7 +45,7 @@ export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMe
                   : 'text-[#6B6A66] hover:text-[#1A1A18] hover:bg-[#F4F3F0]'
               }`}
             >
-              {tab === 'chat' ? 'Chat' : 'Analyser'}
+              {tab === 'chat' ? 'Chat' : tab === 'analyser' ? 'Analyser' : 'Voix'}
             </button>
           ))}
         </div>
@@ -55,17 +58,27 @@ export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMe
           messages={messages}
           isLoading={isLoading}
           cvData={cvData}
+          projectId={projectId}
           onUpdateCV={onUpdateCV}
           addMessage={addMessage}
           setIsLoading={setIsLoading}
         />
-      ) : (
+      ) : activeTab === 'analyser' ? (
         <AnalyserTab
           cvData={cvData}
+          projectId={projectId}
           onApplyRec={(rec) => {
             setActiveTab('chat')
-            // Signal to ChatTab via addMessage — ChatTab picks it up via pendingMessage
             addMessage('__apply__' as Message['role'], rec)
+          }}
+        />
+      ) : (
+        <VoiceContextPanel
+          cvData={cvData}
+          projectId={projectId ?? ''}
+          onSendToChat={(text) => {
+            setActiveTab('chat')
+            addMessage('__voiceinject__' as Message['role'], text)
           }}
         />
       )}
@@ -75,7 +88,7 @@ export default function Sidebar({ messages, isLoading, cvData, onUpdateCV, addMe
 
 /* ── Chat tab ── */
 
-const SYSTEM_PROMPT = `Tu es un expert en rédaction de CV. Tu as accès aux données actuelles en JSON.
+const SYSTEM_PROMPT_BASE = `Tu es un expert en rédaction de CV. Tu as accès aux données actuelles en JSON.
 
 RÈGLES DE RÉPONSE :
 1. Pour modifier UN ou QUELQUES champs ciblés : commence par PATCH_UPDATE: suivi d'un tableau JSON.
@@ -90,22 +103,45 @@ RÈGLES DE RÉPONSE :
 
 RÈGLE DE LANGUE : Détecte la langue principale du CV (champs name, summary, experience, etc.) et réponds et écris les modifications dans cette même langue. Si le CV est en anglais, réponds en anglais et modifie le contenu en anglais. Si en français, en français.`
 
-function ChatTab({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoading }: Props) {
+function buildSystemPrompt(projectId?: string): string {
+  if (!projectId) return SYSTEM_PROMPT_BASE
+  try {
+    const pack = loadContextPack(projectId)
+    const filled = pack.entries.filter(e => e.transcript)
+    if (!filled.length) return SYSTEM_PROMPT_BASE
+    const ctx = filled.map(e => `${e.label} : "${e.transcript}"`).join('\n')
+    return `${SYSTEM_PROMPT_BASE}\n\n[CONTEXTE ADDITIONNEL FOURNI PAR L'UTILISATEUR]\n${ctx}\nUtilisez ces informations pour enrichir, préciser ou valider les modifications demandées. Ne les inventez pas, elles viennent directement de la bouche de l'utilisateur.`
+  } catch {
+    return SYSTEM_PROMPT_BASE
+  }
+}
+
+function ChatTab({ messages, isLoading, cvData, projectId, onUpdateCV, addMessage, setIsLoading }: Props) {
   const [input, setInput] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
   const lastApplyRef = useRef<string | null>(null)
+  const lastVoiceRef = useRef<string | null>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Watch for __apply__ messages injected by AnalyserTab (ref guards against StrictMode double-fire)
+  // Watch for __apply__ messages injected by AnalyserTab
   useEffect(() => {
     const last = messages[messages.length - 1]
     if (last?.role === ('__apply__' as Message['role']) && last.content !== lastApplyRef.current) {
       lastApplyRef.current = last.content
-      const text = `Améliore la section correspondante selon cette recommandation : "${last.content}"`
-      sendText(text)
+      sendText(`Améliore la section correspondante selon cette recommandation : "${last.content}"`)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages])
+
+  // Watch for __voiceinject__ messages from VoiceContextPanel
+  useEffect(() => {
+    const last = messages[messages.length - 1]
+    if (last?.role === ('__voiceinject__' as Message['role']) && last.content !== lastVoiceRef.current) {
+      lastVoiceRef.current = last.content
+      sendText(last.content)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages])
@@ -121,7 +157,7 @@ function ChatTab({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoa
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system: SYSTEM_PROMPT,
+          system: buildSystemPrompt(projectId),
           user: `CV actuel : ${JSON.stringify(cvData ?? {})}\n\nDemande : ${text}`,
         }),
       })
@@ -163,7 +199,7 @@ function ChatTab({ messages, isLoading, cvData, onUpdateCV, addMessage, setIsLoa
     <>
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
         {messages
-          .filter(m => m.role !== ('__apply__' as Message['role']))
+          .filter(m => m.role !== ('__apply__' as Message['role']) && m.role !== ('__voiceinject__' as Message['role']))
           .map((msg, i) => <MessageBubble key={i} msg={msg} />)}
         {isLoading && (
           <div className="flex gap-1 items-center text-[#9D9C98] text-xs font-body">
@@ -220,8 +256,8 @@ const SCORE_LABELS: Record<keyof CVAnalysis['scores'], string> = {
   coherence: 'Cohérence',
 }
 
-function AnalyserTab({ cvData, onApplyRec }: { cvData: CVData | null; onApplyRec: (rec: string) => void }) {
-  const [analysis, setAnalysis] = useState<CVAnalysis | null>(() => loadAnalysis())
+function AnalyserTab({ cvData, projectId, onApplyRec }: { cvData: CVData | null; projectId?: string; onApplyRec: (rec: string) => void }) {
+  const [analysis, setAnalysis] = useState<CVAnalysis | null>(() => loadAnalysis(projectId))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openSection, setOpenSection] = useState<string | null>(null)
@@ -249,7 +285,7 @@ function AnalyserTab({ cvData, onApplyRec }: { cvData: CVData | null; onApplyRec
       const updated = JSON.parse(raw) as SectionAnalysis
       const newAnalysis = { ...analysis, sections: analysis.sections.map(s => s.name === section.name ? updated : s) }
       setAnalysis(newAnalysis)
-      saveAnalysis(newAnalysis)
+      saveAnalysis(newAnalysis, projectId)
     } catch { /* silent fail */ } finally {
       setRescoringSection(null)
     }
@@ -287,7 +323,7 @@ Réponds en français.`,
         savedAt: new Date().toISOString(),
       }
       setAnalysis(result)
-      saveAnalysis(result)
+      saveAnalysis(result, projectId)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur inconnue')
     } finally {
@@ -302,7 +338,7 @@ Réponds en français.`,
       : [...analysis.savedRecommendations, rec]
     const updated = { ...analysis, savedRecommendations: saved }
     setAnalysis(updated)
-    saveAnalysis(updated)
+    saveAnalysis(updated, projectId)
   }
 
   return (

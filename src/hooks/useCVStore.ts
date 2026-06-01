@@ -1,17 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useReducer, useEffect } from 'react'
 import { CVData, Message } from '@/types/cv'
 import {
-  saveCV, loadCV, decodeCVFromURL,
+  saveCV, loadCV,
   saveTemplate, loadTemplate,
   savePhoto, loadPhoto,
   saveShowPhoto, loadShowPhoto,
   CVVersion, loadVersions, saveVersion, upsertVersion as upsertVersionStorage, deleteVersion,
 } from '@/lib/cvStorage'
 import { normaliseCVData } from '@/lib/parseAIResponse'
-
-const LANGUAGE_KEY = 'cvremaster_language'
+import { updateProjectMeta } from '@/lib/projectStorage'
 
 function detectCVLanguage(cv: CVData): string {
   const text = `${cv.tagline} ${cv.summary}`.toLowerCase()
@@ -19,94 +18,151 @@ function detectCVLanguage(cv: CVData): string {
   return ((text.match(frWords) ?? []).length >= 3) ? 'fr' : 'en'
 }
 
-export function useCVStore() {
-  const [cvData, setCVData] = useState<CVData | null>(null)
-  const [photo, setPhotoState] = useState<string | null>(null)
-  const [showPhoto, setShowPhotoState] = useState<boolean>(true)
-  const [activeTemplateId, setActiveTemplateId] = useState<string>('classic')
-  const [activeLanguage, setActiveLanguageState] = useState<string>('fr')
-  const [versions, setVersions] = useState<CVVersion[]>([])
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Bonjour ! Uploadez votre CV PDF pour commencer, ou décrivez votre parcours.' },
-  ])
-  const [isLoading, setIsLoading] = useState(false)
+const WELCOME_MSG = 'Bonjour ! Uploadez votre CV PDF pour commencer, ou décrivez votre parcours.'
+const INITIAL_MESSAGES: Message[] = [{ role: 'assistant', content: WELCOME_MSG }]
+
+interface StoreState {
+  cvData: CVData | null
+  photo: string | null
+  showPhoto: boolean
+  activeTemplateId: string
+  activeLanguage: string
+  versions: CVVersion[]
+  messages: Message[]
+  isLoading: boolean
+}
+
+type StoreAction =
+  | { type: 'INIT'; payload: StoreState }
+  | { type: 'SET_CV'; data: CVData }
+  | { type: 'SET_PHOTO'; photo: string | null }
+  | { type: 'SET_SHOW_PHOTO'; show: boolean }
+  | { type: 'SET_TEMPLATE'; id: string }
+  | { type: 'SET_LANGUAGE'; lang: string }
+  | { type: 'SET_VERSIONS'; versions: CVVersion[] }
+  | { type: 'PREPEND_VERSION'; version: CVVersion }
+  | { type: 'REMOVE_VERSION'; id: string }
+  | { type: 'ADD_MESSAGE'; role: Message['role']; content: string }
+  | { type: 'SET_LOADING'; loading: boolean }
+
+const DEFAULT_STATE: StoreState = {
+  cvData: null,
+  photo: null,
+  showPhoto: true,
+  activeTemplateId: 'classic',
+  activeLanguage: 'fr',
+  versions: [],
+  messages: INITIAL_MESSAGES,
+  isLoading: false,
+}
+
+function reducer(state: StoreState, action: StoreAction): StoreState {
+  switch (action.type) {
+    case 'INIT': return action.payload
+    case 'SET_CV': return { ...state, cvData: action.data }
+    case 'SET_PHOTO': return { ...state, photo: action.photo }
+    case 'SET_SHOW_PHOTO': return { ...state, showPhoto: action.show }
+    case 'SET_TEMPLATE': return { ...state, activeTemplateId: action.id }
+    case 'SET_LANGUAGE': return { ...state, activeLanguage: action.lang }
+    case 'SET_VERSIONS': return { ...state, versions: action.versions }
+    case 'PREPEND_VERSION': return { ...state, versions: [action.version, ...state.versions].slice(0, 20) }
+    case 'REMOVE_VERSION': return { ...state, versions: state.versions.filter(v => v.id !== action.id) }
+    case 'ADD_MESSAGE': return { ...state, messages: [...state.messages, { role: action.role, content: action.content }] }
+    case 'SET_LOADING': return { ...state, isLoading: action.loading }
+  }
+}
+
+function loadProjectState(projectId: string): StoreState {
+  const savedPhoto = loadPhoto(projectId)
+  const saved = loadCV(projectId)
+
+  let cvData: CVData | null = null
+  let language = 'fr'
+  let messages = INITIAL_MESSAGES
+
+  if (saved) {
+    cvData = normaliseCVData(saved as unknown as Record<string, unknown>)
+    try {
+      const savedLang = localStorage.getItem(`cvremaster_language_${projectId}`)
+      language = savedLang ?? detectCVLanguage(cvData)
+    } catch {}
+    messages = [
+      ...INITIAL_MESSAGES,
+      { role: 'assistant' as Message['role'], content: 'CV précédent restauré. Uploadez un nouveau PDF ou continuez à éditer.' },
+    ]
+  } else {
+    try {
+      const lang = localStorage.getItem(`cvremaster_language_${projectId}`)
+      if (lang) language = lang
+    } catch {}
+  }
+
+  return {
+    cvData,
+    photo: savedPhoto,
+    showPhoto: loadShowPhoto(projectId),
+    activeTemplateId: loadTemplate(projectId),
+    activeLanguage: language,
+    versions: loadVersions(projectId),
+    messages,
+    isLoading: false,
+  }
+}
+
+export function useCVStore(projectId: string) {
+  const [state, dispatch] = useReducer(reducer, DEFAULT_STATE)
 
   useEffect(() => {
-    setActiveTemplateId(loadTemplate())
-    setShowPhotoState(loadShowPhoto())
-    setVersions(loadVersions())
-
-    const savedPhoto = loadPhoto()
-    if (savedPhoto) setPhotoState(savedPhoto)
-
-    const params = new URLSearchParams(window.location.search)
-    const encoded = params.get('cv')
-    if (encoded) {
-      const decoded = decodeCVFromURL(encoded)
-      if (decoded) {
-        const cv = normaliseCVData(decoded as unknown as Record<string, unknown>)
-        setCVData(cv)
-        // Auto-detect language only if user hasn't explicitly set one
-        const savedLang = localStorage.getItem(LANGUAGE_KEY)
-        setActiveLanguageState(savedLang ?? detectCVLanguage(cv))
-        return
-      }
-    }
-    const saved = loadCV()
-    if (saved) {
-      const cv = normaliseCVData(saved as unknown as Record<string, unknown>)
-      setCVData(cv)
-      // Auto-detect language only if user hasn't explicitly set one
-      const savedLang = localStorage.getItem(LANGUAGE_KEY)
-      setActiveLanguageState(savedLang ?? detectCVLanguage(cv))
-      addMessage('assistant', 'CV précédent restauré. Uploadez un nouveau PDF ou continuez à éditer.')
-    } else {
-      try {
-        const lang = localStorage.getItem(LANGUAGE_KEY)
-        if (lang) setActiveLanguageState(lang)
-      } catch {}
-    }
-  }, [])
+    if (!projectId) return
+    dispatch({ type: 'INIT', payload: loadProjectState(projectId) })
+  }, [projectId])
 
   function addMessage(role: Message['role'], content: string) {
-    setMessages(prev => [...prev, { role, content }])
+    dispatch({ type: 'ADD_MESSAGE', role, content })
+  }
+
+  function setIsLoading(loading: boolean) {
+    dispatch({ type: 'SET_LOADING', loading })
   }
 
   function updateCV(data: CVData) {
-    setCVData(data)
-    saveCV(data)
+    dispatch({ type: 'SET_CV', data })
+    saveCV(data, projectId)
+    if (projectId) updateProjectMeta(projectId, { tagline: data.tagline })
   }
 
   function setTemplate(id: string) {
-    setActiveTemplateId(id)
-    saveTemplate(id)
+    dispatch({ type: 'SET_TEMPLATE', id })
+    saveTemplate(id, projectId)
+    if (projectId) updateProjectMeta(projectId, { templateId: id })
   }
 
   function setPhoto(dataUrl: string | null) {
-    setPhotoState(dataUrl)
-    savePhoto(dataUrl)
+    dispatch({ type: 'SET_PHOTO', photo: dataUrl })
+    savePhoto(dataUrl, projectId)
   }
 
   function setShowPhoto(val: boolean) {
-    setShowPhotoState(val)
-    saveShowPhoto(val)
+    dispatch({ type: 'SET_SHOW_PHOTO', show: val })
+    saveShowPhoto(val, projectId)
   }
 
   function setActiveLanguage(lang: string) {
-    setActiveLanguageState(lang)
-    try { localStorage.setItem(LANGUAGE_KEY, lang) } catch {}
+    dispatch({ type: 'SET_LANGUAGE', lang })
+    try { localStorage.setItem(`cvremaster_language_${projectId}`, lang) } catch {}
+    if (projectId) updateProjectMeta(projectId, { language: lang })
   }
 
   function createVersion(name: string, language?: string) {
-    if (!cvData) return
-    const v = saveVersion(name, cvData, activeTemplateId, language)
-    setVersions(prev => [v, ...prev].slice(0, 20))
+    if (!state.cvData) return
+    const v = saveVersion(name, state.cvData, state.activeTemplateId, language, projectId)
+    dispatch({ type: 'PREPEND_VERSION', version: v })
   }
 
   function upsertVersion(name: string, language?: string) {
-    if (!cvData) return
-    upsertVersionStorage(name, cvData, activeTemplateId, language)
-    setVersions(loadVersions())
+    if (!state.cvData) return
+    upsertVersionStorage(name, state.cvData, state.activeTemplateId, language, projectId)
+    dispatch({ type: 'SET_VERSIONS', versions: loadVersions(projectId) })
   }
 
   function restoreVersion(v: CVVersion) {
@@ -117,25 +173,25 @@ export function useCVStore() {
   }
 
   function removeVersion(id: string) {
-    deleteVersion(id)
-    setVersions(prev => prev.filter(v => v.id !== id))
+    deleteVersion(id, projectId)
+    dispatch({ type: 'REMOVE_VERSION', id })
   }
 
-  // Merge photo into cvData for template rendering
-  const cvWithPhoto: CVData | null = cvData
-    ? { ...cvData, photo: (showPhoto && photo) ? photo : undefined }
+  const cvWithPhoto: CVData | null = state.cvData
+    ? { ...state.cvData, photo: (state.showPhoto && state.photo) ? state.photo : undefined }
     : null
 
   return {
+    projectId,
     cvData: cvWithPhoto,
-    photo,
-    showPhoto,
-    activeTemplateId,
-    activeLanguage,
+    photo: state.photo,
+    showPhoto: state.showPhoto,
+    activeTemplateId: state.activeTemplateId,
+    activeLanguage: state.activeLanguage,
     setActiveLanguage,
-    versions,
-    messages,
-    isLoading,
+    versions: state.versions,
+    messages: state.messages,
+    isLoading: state.isLoading,
     setIsLoading,
     addMessage,
     updateCV,

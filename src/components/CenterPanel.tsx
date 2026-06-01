@@ -3,9 +3,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { CVData } from '@/types/cv'
 import TemplateRenderer from './TemplateRenderer'
+import { findEntryBreak, RENDER_WIDTH, SCREEN_PAGE_H } from '@/lib/exportPDF'
 
-const A4_H_PX = 1123
-const A4_W_PX = 794
+const A4_H_PX = SCREEN_PAGE_H   // ≈ 1123 — must match PDF export page height
+const A4_W_PX = RENDER_WIDTH     // 794 — must match PDF render width
 
 interface Props {
   cvData: CVData | null
@@ -144,24 +145,12 @@ function PageSeparators({ wrapperRef }: { wrapperRef: React.RefObject<HTMLDivEle
 }
 
 function findSafeBreak(wrapper: HTMLElement, idealY: number): number {
-  const SCAN = 80
   const wRect = wrapper.getBoundingClientRect()
-  const nodes = wrapper.querySelectorAll<HTMLElement>('*')
-  let bestY = idealY
-
-  nodes.forEach(node => {
-    // Only check leaf-level nodes (no child elements — these carry actual text)
-    if (node.children.length > 0) return
-    const r = node.getBoundingClientRect()
-    const top = r.top - wRect.top
-    const bottom = top + r.height
-    // Node straddles the page boundary — shift break to just before the node
-    if (top < idealY && bottom > idealY && top >= idealY - SCAN) {
-      bestY = Math.min(bestY, top - 2)
-    }
+  const bounds = Array.from(wrapper.querySelectorAll<HTMLElement>('.entry')).map(e => {
+    const r = e.getBoundingClientRect()
+    return { top: r.top - wRect.top, bottom: r.bottom - wRect.top }
   })
-
-  return Math.max(bestY, idealY - SCAN)
+  return findEntryBreak(bounds, idealY)
 }
 
 function EmptyState() {

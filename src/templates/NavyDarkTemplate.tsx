@@ -140,7 +140,7 @@ export default function NavyDarkTemplate({ cvData, language }: Props) {
   )
 }
 
-function SideSection({ title, navy: _navy, muted, children }: { title: string; navy: string; muted: string; children: React.ReactNode }) {
+function SideSection({ title, navy: _navy, muted: _muted, children }: { title: string; navy: string; muted: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#FFFFFF', borderBottom: `1px solid #3D4F68`, paddingBottom: 4, marginBottom: 10 }}>

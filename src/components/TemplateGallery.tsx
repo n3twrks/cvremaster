@@ -11,7 +11,7 @@ export default function TemplateGallery({ activeTemplateId, onSelect }: Props) {
   return (
     <div className="flex-1 overflow-y-auto bg-[#F4F3F0] p-6">
       <p className="text-xs font-body text-[#6B6A66] mb-4">
-        Choisissez un template — votre CV s'adapte instantanément dans l'onglet Aperçu.
+        Choisissez un template — votre CV s&apos;adapte instantanément dans l&apos;onglet Aperçu.
       </p>
       <div className="grid grid-cols-2 gap-4">
         {TEMPLATES.map(t => (
@@ -96,7 +96,7 @@ function Thumbnail({ id }: { id: string }) {
               <div className="w-28 h-1 bg-[#E5E4E0] rounded-sm" />
             </div>
           </div>
-          {[['Personal Summary', 90], ['Work Experience', 100], ['Education', 70]].map(([label, w], i) => (
+          {[['Personal Summary', 90], ['Work Experience', 100], ['Education', 70]].map(([, w], i) => (
             <div key={i} className="flex border-b border-[#EEE] px-2 py-1.5">
               <div className="w-16 shrink-0">
                 <div className="h-1.5 bg-[#3DBDB3] rounded-sm w-full" />
