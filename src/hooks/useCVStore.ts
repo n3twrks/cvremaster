@@ -7,6 +7,10 @@ import {
   saveTemplate, loadTemplate,
   savePhoto, loadPhoto,
   saveShowPhoto, loadShowPhoto,
+  saveShowHobbies, loadShowHobbies,
+  saveShowSummary, loadShowSummary,
+  saveHiddenBullets, loadHiddenBullets,
+  saveSpacingScale, loadSpacingScale,
   CVVersion, loadVersions, saveVersion, upsertVersion as upsertVersionStorage, deleteVersion,
 } from '@/lib/cvStorage'
 import { normaliseCVData } from '@/lib/parseAIResponse'
@@ -25,6 +29,10 @@ interface StoreState {
   cvData: CVData | null
   photo: string | null
   showPhoto: boolean
+  showSummary: boolean
+  showHobbies: boolean
+  hiddenBullets: string[]
+  spacingScale: number
   activeTemplateId: string
   activeLanguage: string
   versions: CVVersion[]
@@ -37,6 +45,10 @@ type StoreAction =
   | { type: 'SET_CV'; data: CVData }
   | { type: 'SET_PHOTO'; photo: string | null }
   | { type: 'SET_SHOW_PHOTO'; show: boolean }
+  | { type: 'SET_SHOW_SUMMARY'; show: boolean }
+  | { type: 'SET_SHOW_HOBBIES'; show: boolean }
+  | { type: 'SET_HIDDEN_BULLETS'; hidden: string[] }
+  | { type: 'SET_SPACING_SCALE'; scale: number }
   | { type: 'SET_TEMPLATE'; id: string }
   | { type: 'SET_LANGUAGE'; lang: string }
   | { type: 'SET_VERSIONS'; versions: CVVersion[] }
@@ -49,6 +61,10 @@ const DEFAULT_STATE: StoreState = {
   cvData: null,
   photo: null,
   showPhoto: true,
+  showSummary: true,
+  showHobbies: true,
+  hiddenBullets: [],
+  spacingScale: 1,
   activeTemplateId: 'classic',
   activeLanguage: 'fr',
   versions: [],
@@ -62,6 +78,10 @@ function reducer(state: StoreState, action: StoreAction): StoreState {
     case 'SET_CV': return { ...state, cvData: action.data }
     case 'SET_PHOTO': return { ...state, photo: action.photo }
     case 'SET_SHOW_PHOTO': return { ...state, showPhoto: action.show }
+    case 'SET_SHOW_SUMMARY': return { ...state, showSummary: action.show }
+    case 'SET_SHOW_HOBBIES': return { ...state, showHobbies: action.show }
+    case 'SET_HIDDEN_BULLETS': return { ...state, hiddenBullets: action.hidden }
+    case 'SET_SPACING_SCALE': return { ...state, spacingScale: action.scale }
     case 'SET_TEMPLATE': return { ...state, activeTemplateId: action.id }
     case 'SET_LANGUAGE': return { ...state, activeLanguage: action.lang }
     case 'SET_VERSIONS': return { ...state, versions: action.versions }
@@ -101,6 +121,10 @@ function loadProjectState(projectId: string): StoreState {
     cvData,
     photo: savedPhoto,
     showPhoto: loadShowPhoto(projectId),
+    showSummary: loadShowSummary(projectId),
+    showHobbies: loadShowHobbies(projectId),
+    hiddenBullets: loadHiddenBullets(projectId),
+    spacingScale: loadSpacingScale(projectId),
     activeTemplateId: loadTemplate(projectId),
     activeLanguage: language,
     versions: loadVersions(projectId),
@@ -147,6 +171,28 @@ export function useCVStore(projectId: string) {
     saveShowPhoto(val, projectId)
   }
 
+  function setShowSummary(val: boolean) {
+    dispatch({ type: 'SET_SHOW_SUMMARY', show: val })
+    saveShowSummary(val, projectId)
+  }
+
+  function setShowHobbies(val: boolean) {
+    dispatch({ type: 'SET_SHOW_HOBBIES', show: val })
+    saveShowHobbies(val, projectId)
+  }
+
+  function setSpacingScale(scale: number) {
+    dispatch({ type: 'SET_SPACING_SCALE', scale })
+    saveSpacingScale(scale, projectId)
+  }
+
+  function toggleHiddenBullet(key: string) {
+    const current = state.hiddenBullets
+    const next = current.includes(key) ? current.filter(k => k !== key) : [...current, key]
+    dispatch({ type: 'SET_HIDDEN_BULLETS', hidden: next })
+    saveHiddenBullets(next, projectId)
+  }
+
   function setActiveLanguage(lang: string) {
     dispatch({ type: 'SET_LANGUAGE', lang })
     try { localStorage.setItem(`cvremaster_language_${projectId}`, lang) } catch {}
@@ -177,15 +223,29 @@ export function useCVStore(projectId: string) {
     dispatch({ type: 'REMOVE_VERSION', id })
   }
 
-  const cvWithPhoto: CVData | null = state.cvData
-    ? { ...state.cvData, photo: (state.showPhoto && state.photo) ? state.photo : undefined }
+  const cvForDisplay: CVData | null = state.cvData
+    ? {
+        ...state.cvData,
+        photo: (state.showPhoto && state.photo) ? state.photo : undefined,
+        summary: state.showSummary ? state.cvData.summary : '',
+        hobbies: state.showHobbies ? state.cvData.hobbies : undefined,
+        experience: state.cvData.experience.map((exp, ei) => ({
+          ...exp,
+          bullets: exp.bullets.filter((_, bi) => !state.hiddenBullets.includes(`${ei}_${bi}`)),
+        })),
+      }
     : null
 
   return {
     projectId,
-    cvData: cvWithPhoto,
+    cvData: cvForDisplay,
+    rawCvData: state.cvData,
     photo: state.photo,
     showPhoto: state.showPhoto,
+    showSummary: state.showSummary,
+    showHobbies: state.showHobbies,
+    hiddenBullets: state.hiddenBullets,
+    spacingScale: state.spacingScale,
     activeTemplateId: state.activeTemplateId,
     activeLanguage: state.activeLanguage,
     setActiveLanguage,
@@ -198,6 +258,10 @@ export function useCVStore(projectId: string) {
     setTemplate,
     setPhoto,
     setShowPhoto,
+    setShowSummary,
+    setShowHobbies,
+    setSpacingScale,
+    toggleHiddenBullet,
     createVersion,
     upsertVersion,
     restoreVersion,

@@ -36,7 +36,7 @@ interface Props {
 
 export default function Toolbar({
   cvData, onUpdateCV, addMessage, setIsLoading,
-  versions, upsertVersion, restoreVersion, removeVersion,
+  versions, createVersion, upsertVersion, restoreVersion, removeVersion,
   activeLanguage, setActiveLanguage,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -194,9 +194,10 @@ export default function Toolbar({
   function handleSaveVersion() {
     if (!cvData) return
     const langName = LANGUAGES.find(l => l.code === activeLanguage)?.name ?? activeLanguage
-    upsertVersion(versionName || langName, activeLanguage)
+    const name = versionName.trim() || langName
+    createVersion(name, activeLanguage)
     setVersionName('')
-    addMessage('assistant', `Snapshot sauvegardé pour ${LANGUAGES.find(l => l.code === activeLanguage)?.name ?? activeLanguage}.`)
+    addMessage('assistant', `Version "${name}" sauvegardée.`)
   }
 
   const currentLang = LANGUAGES.find(l => l.code === activeLanguage) ?? LANGUAGES[0]

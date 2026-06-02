@@ -93,12 +93,13 @@ const SYSTEM_PROMPT_BASE = `Tu es un expert en rédaction de CV. Tu as accès au
 RÈGLES DE RÉPONSE :
 1. Pour modifier UN ou QUELQUES champs ciblés : commence par PATCH_UPDATE: suivi d'un tableau JSON.
    Format : PATCH_UPDATE: [{"path": "champ", "value": "nouvelle valeur"}, ...]
-   Chemins valides : "name", "tagline", "summary", "contact.N", "skills.N", "languages.N", "hobbies.N",
+   Chemins valides : "name", "tagline", "summary", "contact.N", "skills.N", "languages.N.name", "languages.N.level", "languages.N.score", "hobbies.N",
    "experience.N.title", "experience.N.company", "experience.N.location", "experience.N.date", "experience.N.bullets.N",
    "education.N.degree", "education.N.school", "education.N.date"
    (remplace N par l'index 0, 1, 2…)
 2. Pour restructurer entièrement le CV ou le créer depuis zéro : commence par JSON_UPDATE: suivi du JSON complet.
-   Structure : { name, tagline, contact[], summary, experience[{title,company,location,date,bullets[]}], education[{school,degree,date}], skills[], languages[], hobbies[] }
+   Structure : { name, tagline, contact[], summary, experience[{title,company,location,date,bullets[]}], education[{school,degree,date}], skills[], languages[{name,level,score}], hobbies[] }
+   Pour languages : name = nom de la langue, level = texte libre (Natif, C1, Bilingue, Professionnel…), score = entier 1–5
 3. Pour une question ou conseil général : réponds normalement en texte.
 
 RÈGLE DE LANGUE : Détecte la langue principale du CV (champs name, summary, experience, etc.) et réponds et écris les modifications dans cette même langue. Si le CV est en anglais, réponds en anglais et modifie le contenu en anglais. Si en français, en français.`
@@ -121,6 +122,8 @@ function ChatTab({ messages, isLoading, cvData, projectId, onUpdateCV, addMessag
   const bottomRef = useRef<HTMLDivElement>(null)
   const lastApplyRef = useRef<string | null>(null)
   const lastVoiceRef = useRef<string | null>(null)
+  // Stores raw API exchanges for multi-turn context (not display history)
+  const apiHistoryRef = useRef<Array<{ role: 'user' | 'model'; content: string }>>([])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -152,19 +155,31 @@ function ChatTab({ messages, isLoading, cvData, projectId, onUpdateCV, addMessag
     addMessage('thinking', 'L\'IA réfléchit…')
     setIsLoading(true)
 
+    // Pass last 20 messages (10 exchanges) to avoid context overflow
+    const history = apiHistoryRef.current.slice(-20)
+
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           system: buildSystemPrompt(projectId),
+          // Include latest CV state in current message only — history keeps just the questions
           user: `CV actuel : ${JSON.stringify(cvData ?? {})}\n\nDemande : ${text}`,
+          history,
         }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erreur API')
 
       const result: string = data.result
+
+      // Persist exchange: store user question (no CV JSON) + raw model response
+      apiHistoryRef.current = [
+        ...apiHistoryRef.current,
+        { role: 'user', content: text },
+        { role: 'model', content: result },
+      ]
 
       const patches = extractPatchUpdate(result)
       if (patches) {
@@ -182,6 +197,7 @@ function ChatTab({ messages, isLoading, cvData, projectId, onUpdateCV, addMessag
 
       addMessage('assistant', result)
     } catch (err) {
+      // Don't update history on error — keep conversation state clean
       addMessage('assistant', `Erreur : ${err instanceof Error ? err.message : 'inconnu'}`)
     } finally {
       setIsLoading(false)

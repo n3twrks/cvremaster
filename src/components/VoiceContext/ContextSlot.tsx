@@ -13,7 +13,7 @@ interface Props {
   onSendToChat: (entry: ContextEntry) => void
 }
 
-type SlotState = 'idle' | 'recording' | 'transcribing' | 'done' | 'editing' | 'confirming-rerecord'
+type SlotState = 'idle' | 'rerecord-choice' | 'recording' | 'transcribing' | 'done' | 'editing' | 'confirming-rerecord'
 
 function getPrompt(type: ContextEntry['type'], label: string): string {
   switch (type) {
@@ -139,8 +139,8 @@ export default function ContextSlot({ entry, onUpdate, onSendToChat }: Props) {
             </div>
           )}
 
-          {/* Empty — record / upload */}
-          {state === 'idle' && !hasContent && (
+          {/* Empty — record / upload (also shown after confirming re-record) */}
+          {(state === 'idle' && !hasContent) || state === 'rerecord-choice' ? (
             <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => { setError(null); setState('recording') }}
@@ -156,6 +156,14 @@ export default function ContextSlot({ entry, onUpdate, onSendToChat }: Props) {
                 <Upload size={12} />
                 Uploader
               </button>
+              {state === 'rerecord-choice' && (
+                <button
+                  onClick={() => setState('done')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#CCCBC6] text-[#9D9C98] text-xs font-body hover:bg-[#F4F3F0] transition-colors"
+                >
+                  Annuler
+                </button>
+              )}
               <input
                 ref={fileRef}
                 type="file"
@@ -167,7 +175,7 @@ export default function ContextSlot({ entry, onUpdate, onSendToChat }: Props) {
                 }}
               />
             </div>
-          )}
+          ) : null}
 
           {/* Recording */}
           {state === 'recording' && (
@@ -196,10 +204,10 @@ export default function ContextSlot({ entry, onUpdate, onSendToChat }: Props) {
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setError(null); setState('recording') }}
+                  onClick={() => { setError(null); setState('rerecord-choice') }}
                   className="px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-600 text-xs font-body font-medium hover:bg-red-100 transition-colors"
                 >
-                  Oui, re-enregistrer
+                  Oui, remplacer
                 </button>
                 <button
                   onClick={() => setState('done')}

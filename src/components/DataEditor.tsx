@@ -1,7 +1,8 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { CVData, Experience, Education } from '@/types/cv'
+import { Eye, EyeOff } from 'lucide-react'
+import { CVData, Experience, Education, Language } from '@/types/cv'
 
 interface Props {
   cvData: CVData | null
@@ -10,9 +11,17 @@ interface Props {
   onSetPhoto: (dataUrl: string | null) => void
   showPhoto: boolean
   onSetShowPhoto: (v: boolean) => void
+  showSummary: boolean
+  onSetShowSummary: (v: boolean) => void
+  hiddenBullets: string[]
+  onToggleHiddenBullet: (key: string) => void
+  showHobbies: boolean
+  onSetShowHobbies: (v: boolean) => void
+  spacingScale: number
+  onSetSpacingScale: (v: number) => void
 }
 
-export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, showPhoto, onSetShowPhoto }: Props) {
+export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, showPhoto, onSetShowPhoto, showSummary, onSetShowSummary, hiddenBullets, onToggleHiddenBullet, showHobbies, onSetShowHobbies, spacingScale, onSetSpacingScale }: Props) {
   const photoRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDialogElement>(null)
   const dialogSaveRef = useRef<((val: string) => void) | null>(null)
@@ -26,7 +35,9 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
   const [skillDragOver, setSkillDragOver] = useState<number | null>(null)
   const [newSkill, setNewSkill] = useState('')
   const [newGroupName, setNewGroupName] = useState('')
-  const [newLang, setNewLang] = useState('')
+  const [newLangName, setNewLangName] = useState('')
+  const [newLangLevel, setNewLangLevel] = useState('')
+  const [newLangScore, setNewLangScore] = useState(3)
   const [newHobby, setNewHobby] = useState('')
   const [newContact, setNewContact] = useState('')
   const [dialogText, setDialogText] = useState('')
@@ -131,18 +142,28 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
     setExpandedEdu(cvData!.education.length)
   }
 
+  /* ── Language helpers ── */
+  function addLanguage() {
+    if (!newLangName.trim()) return
+    const lang: Language = { name: newLangName.trim(), level: newLangLevel.trim(), score: newLangScore }
+    update({ languages: [...cvData!.languages, lang] })
+    setNewLangName('')
+    setNewLangLevel('')
+    setNewLangScore(3)
+  }
+
   /* ── Tag helpers ── */
-  function addTag(field: 'skills' | 'languages' | 'hobbies', val: string, setter: (v: string) => void) {
+  function addTag(field: 'skills' | 'hobbies', val: string, setter: (v: string) => void) {
     if (!val.trim()) return
     const current = (cvData![field] ?? []) as string[]
     update({ [field]: [...current, val.trim()] })
     setter('')
   }
-  function removeTag(field: 'skills' | 'languages' | 'hobbies', i: number) {
+  function removeTag(field: 'skills' | 'hobbies', i: number) {
     const current = (cvData![field] ?? []) as string[]
     update({ [field]: current.filter((_, idx) => idx !== i) })
   }
-  function reorderTag(field: 'skills' | 'languages' | 'hobbies', from: number, to: number) {
+  function reorderTag(field: 'skills' | 'hobbies', from: number, to: number) {
     if (from === to) return
     const list = [...(cvData![field] ?? [])] as string[]
     const [item] = list.splice(from, 1)
@@ -166,6 +187,29 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
   return (
     <>
       <div className="flex-1 overflow-y-auto bg-[#F4F3F0] p-6 space-y-4">
+
+        {/* ── Densité / Espacement ── */}
+        <div className="bg-white border border-[#E5E4E0] rounded-lg px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-body font-semibold text-[#1B4332] uppercase tracking-widest">Espacement</span>
+            <span className="text-[11px] font-mono text-[#6B6A66]">
+              {spacingScale === 1 ? 'Normal' : `${spacingScale > 1 ? '+' : ''}${Math.round((spacingScale - 1) * 100)}%`}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-body text-[#9D9C98]">−40%</span>
+            <input
+              type="range"
+              min={60}
+              max={130}
+              step={1}
+              value={Math.round(spacingScale * 100)}
+              onChange={e => onSetSpacingScale(Number(e.target.value) / 100)}
+              className="flex-1 h-1.5 rounded-full accent-[#1B4332] cursor-pointer"
+            />
+            <span className="text-[10px] font-body text-[#9D9C98]">+30%</span>
+          </div>
+        </div>
 
         {/* ── Identité ── */}
         <Section title="Identité">
@@ -272,7 +316,7 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
               value={cvData.summary}
               onChange={e => update({ summary: e.target.value })}
               rows={4}
-              className={`${inputCls} w-full resize-none pr-8`}
+              className={`${inputCls} w-full resize-none pr-8 ${!showSummary ? 'opacity-40' : ''}`}
               placeholder="Décrivez votre profil en quelques phrases…"
             />
             <button
@@ -281,6 +325,17 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
               title="Agrandir"
             >
               <ExpandIcon />
+            </button>
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F4F3F0]">
+            <span className="text-[11px] font-body text-[#6B6A66]">Afficher le profil sur le CV</span>
+            <button
+              onClick={() => onSetShowSummary(!showSummary)}
+              role="switch"
+              aria-checked={showSummary}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:ring-offset-1 ${showSummary ? 'bg-[#1B4332]' : 'bg-[#CCCBC6]'}`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${showSummary ? 'translate-x-4' : 'translate-x-0.5'}`} />
             </button>
           </div>
         </Section>
@@ -293,7 +348,6 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
           {cvData.experience.map((exp, i) => (
             <div
               key={i}
-              draggable
               onDragStart={() => { dragExpIdx.current = i }}
               onDragOver={e => { e.preventDefault(); if (dragExpIdx.current !== i) setDragOverExp(i) }}
               onDrop={() => { if (dragExpIdx.current !== null) moveExp(dragExpIdx.current, i); dragExpIdx.current = null; setDragOverExp(null) }}
@@ -305,7 +359,7 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
                 onClick={() => setExpandedExp(expandedExp === i ? null : i)}
                 className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[#FAFAF8] transition-colors text-left"
               >
-                <span className="shrink-0 text-[#CCCBC6] group-hover:text-[#9D9C98] transition-colors cursor-grab active:cursor-grabbing select-none">
+                <span draggable className="shrink-0 text-[#CCCBC6] group-hover:text-[#9D9C98] transition-colors cursor-grab active:cursor-grabbing select-none">
                   <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
                     <circle cx="2.5" cy="2" r="1.2"/><circle cx="7.5" cy="2" r="1.2"/>
                     <circle cx="2.5" cy="7" r="1.2"/><circle cx="7.5" cy="7" r="1.2"/>
@@ -340,25 +394,36 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
                     </Field>
                   </div>
                   <Field label="Points clés">
-                    {exp.bullets.map((b, j) => (
-                      <div key={j} className="flex items-center gap-1.5 mb-1">
-                        <input
-                          type="text"
-                          value={b}
-                          onChange={e => updateBullet(i, j, e.target.value)}
-                          className={`${inputCls} flex-1`}
-                          placeholder="Ex: Développé une feature X réduisant Y de 30%"
-                        />
-                        <button
-                          onClick={() => openDialog(b, val => updateBullet(i, j, val))}
-                          className="w-6 h-6 shrink-0 flex items-center justify-center text-[#9D9C98] hover:text-[#1B4332] transition-colors"
-                          title="Agrandir"
-                        >
-                          <ExpandIcon size={10} />
-                        </button>
-                        <button onClick={() => deleteBullet(i, j)} className={deleteBtnCls}>×</button>
-                      </div>
-                    ))}
+                    {exp.bullets.map((b, j) => {
+                      const bulletKey = `${i}_${j}`
+                      const isHidden = hiddenBullets.includes(bulletKey)
+                      return (
+                        <div key={j} className={`flex items-center gap-1.5 mb-1 ${isHidden ? 'opacity-40' : ''}`}>
+                          <input
+                            type="text"
+                            value={b}
+                            onChange={e => updateBullet(i, j, e.target.value)}
+                            className={`${inputCls} flex-1 ${isHidden ? 'line-through' : ''}`}
+                            placeholder="Ex: Développé une feature X réduisant Y de 30%"
+                          />
+                          <button
+                            onClick={() => onToggleHiddenBullet(bulletKey)}
+                            className="w-6 h-6 shrink-0 flex items-center justify-center text-[#9D9C98] hover:text-[#1B4332] transition-colors"
+                            title={isHidden ? 'Afficher sur le CV' : 'Masquer du CV'}
+                          >
+                            {isHidden ? <EyeOff size={11} /> : <Eye size={11} />}
+                          </button>
+                          <button
+                            onClick={() => openDialog(b, val => updateBullet(i, j, val))}
+                            className="w-6 h-6 shrink-0 flex items-center justify-center text-[#9D9C98] hover:text-[#1B4332] transition-colors"
+                            title="Agrandir"
+                          >
+                            <ExpandIcon size={10} />
+                          </button>
+                          <button onClick={() => deleteBullet(i, j)} className={deleteBtnCls}>×</button>
+                        </div>
+                      )
+                    })}
                     <button onClick={() => addBullet(i)} className="text-xs font-body text-[#1B4332] hover:text-[#163A2B] mt-1">+ Ajouter un point</button>
                   </Field>
                   <div className="flex justify-end pt-1">
@@ -380,7 +445,6 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
           {cvData.education.map((edu, i) => (
             <div
               key={i}
-              draggable
               onDragStart={() => { dragEduIdx.current = i }}
               onDragOver={e => { e.preventDefault(); if (dragEduIdx.current !== i) setDragOverEdu(i) }}
               onDrop={() => { if (dragEduIdx.current !== null) moveEdu(dragEduIdx.current, i); dragEduIdx.current = null; setDragOverEdu(null) }}
@@ -392,7 +456,7 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
                 onClick={() => setExpandedEdu(expandedEdu === i ? null : i)}
                 className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-[#FAFAF8] transition-colors text-left"
               >
-                <span className="shrink-0 text-[#CCCBC6] group-hover:text-[#9D9C98] transition-colors cursor-grab active:cursor-grabbing select-none">
+                <span draggable className="shrink-0 text-[#CCCBC6] group-hover:text-[#9D9C98] transition-colors cursor-grab active:cursor-grabbing select-none">
                   <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
                     <circle cx="2.5" cy="2" r="1.2"/><circle cx="7.5" cy="2" r="1.2"/>
                     <circle cx="2.5" cy="7" r="1.2"/><circle cx="7.5" cy="7" r="1.2"/>
@@ -489,24 +553,111 @@ export default function DataEditor({ cvData, onUpdateCV, photo, onSetPhoto, show
 
         {/* ── Langues ── */}
         <Section title="Langues">
-          <TagList
-            tags={cvData.languages}
-            onRemove={i => removeTag('languages', i)}
-            onReorder={(from, to) => reorderTag('languages', from, to)}
-            color="bg-[#D8EDDF] text-[#1B4332] border-[#A7D9B8]"
-          />
-          <TagInput value={newLang} onChange={setNewLang} onAdd={() => addTag('languages', newLang, setNewLang)} placeholder="Ex: Français — Natif" />
+          <div className="space-y-2 mb-3">
+            {cvData.languages.map((lang, i) => (
+              <div key={i} className="bg-[#FAFAF8] border border-[#E5E4E0] rounded-md px-2.5 py-2 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={lang.name}
+                    onChange={e => {
+                      const updated = cvData.languages.map((l, idx) => idx === i ? { ...l, name: e.target.value } : l)
+                      update({ languages: updated })
+                    }}
+                    className={`${inputCls} flex-1 min-w-0`}
+                    placeholder="Français"
+                  />
+                  <button
+                    onClick={() => update({ languages: cvData.languages.filter((_, idx) => idx !== i) })}
+                    className={deleteBtnCls}
+                  >×</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={lang.level}
+                    onChange={e => {
+                      const updated = cvData.languages.map((l, idx) => idx === i ? { ...l, level: e.target.value } : l)
+                      update({ languages: updated })
+                    }}
+                    className={`${inputCls} flex-1 min-w-0`}
+                    placeholder="Natif, C1, Bilingue…"
+                  />
+                  <div className="flex gap-1 shrink-0">
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <button
+                        key={n}
+                        onClick={() => {
+                          const updated = cvData.languages.map((l, idx) => idx === i ? { ...l, score: n } : l)
+                          update({ languages: updated })
+                        }}
+                        className={`w-4 h-4 rounded-sm transition-colors ${n <= lang.score ? 'bg-[#1B4332]' : 'bg-[#E5E4E0] hover:bg-[#A7D9B8]'}`}
+                        title={`Niveau ${n}/5`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Add new language */}
+          <div className="bg-[#F4F3F0] border border-dashed border-[#CCCBC6] rounded-md px-2.5 py-2 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newLangName}
+                onChange={e => setNewLangName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addLanguage()}
+                className={`${inputCls} flex-1 min-w-0`}
+                placeholder="Langue"
+              />
+              <button onClick={addLanguage} className={`${addBtnCls} shrink-0`}>+</button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newLangLevel}
+                onChange={e => setNewLangLevel(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addLanguage()}
+                className={`${inputCls} flex-1 min-w-0`}
+                placeholder="Niveau (Natif, C1…)"
+              />
+              <div className="flex gap-1 shrink-0">
+                {[1, 2, 3, 4, 5].map(n => (
+                  <button
+                    key={n}
+                    onClick={() => setNewLangScore(n)}
+                    className={`w-4 h-4 rounded-sm transition-colors ${n <= newLangScore ? 'bg-[#1B4332]' : 'bg-[#E5E4E0] hover:bg-[#A7D9B8]'}`}
+                    title={`Niveau ${n}/5`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
         </Section>
 
         {/* ── Hobbies ── */}
         <Section title="Hobbies & Passions">
-          <TagList
-            tags={cvData.hobbies ?? []}
-            onRemove={i => removeTag('hobbies', i)}
-            onReorder={(from, to) => reorderTag('hobbies', from, to)}
-            color="bg-[#FDF3DC] text-[#B45309] border-[#E8A838]"
-          />
-          <TagInput value={newHobby} onChange={setNewHobby} onAdd={() => addTag('hobbies', newHobby, setNewHobby)} placeholder="Ex: Photographie, Running…" />
+          <div className={!showHobbies ? 'opacity-40' : ''}>
+            <TagList
+              tags={cvData.hobbies ?? []}
+              onRemove={i => removeTag('hobbies', i)}
+              onReorder={(from, to) => reorderTag('hobbies', from, to)}
+              color="bg-[#FDF3DC] text-[#B45309] border-[#E8A838]"
+            />
+            <TagInput value={newHobby} onChange={setNewHobby} onAdd={() => addTag('hobbies', newHobby, setNewHobby)} placeholder="Ex: Photographie, Running…" />
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#F4F3F0]">
+            <span className="text-[11px] font-body text-[#6B6A66]">Afficher les hobbies sur le CV</span>
+            <button
+              onClick={() => onSetShowHobbies(!showHobbies)}
+              role="switch"
+              aria-checked={showHobbies}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#1B4332] focus:ring-offset-1 ${showHobbies ? 'bg-[#1B4332]' : 'bg-[#CCCBC6]'}`}
+            >
+              <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform duration-200 ${showHobbies ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
         </Section>
       </div>
 

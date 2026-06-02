@@ -1,14 +1,15 @@
 import { CVData } from '@/types/cv'
 import { getSectionLabels } from '@/lib/sectionLabels'
-import { langScore, SegmentBar, ContactItem } from './utils'
+import { SegmentBar, ContactItem } from './utils'
 
-interface Props { cvData: CVData; language?: string }
+interface Props { cvData: CVData; language?: string; spacingScale?: number }
 
 const TEAL = '#3DBDB3'
 const TEAL_DARK = '#2A9D94'
 
-export default function TealHorizontalTemplate({ cvData, language }: Props) {
+export default function TealHorizontalTemplate({ cvData, language, spacingScale = 1 }: Props) {
   const L = getSectionLabels(language)
+  const S = spacingScale
   return (
     <div
       id="cv-content"
@@ -54,19 +55,16 @@ export default function TealHorizontalTemplate({ cvData, language }: Props) {
         </div>
       </div>
 
-      {/* Body: sections laid out as label-left + content-right */}
-      <div style={{ padding: '0 28px 28px' }}>
+      <div style={{ padding: `0 28px ${24 * S}px` }}>
 
-        {/* Summary */}
         {cvData.summary && (
-          <Row label={L.summary} teal={TEAL}>
+          <Row label={L.summary} teal={TEAL} scale={S}>
             <p style={{ fontSize: 12, color: '#555', lineHeight: 1.7 }}>{cvData.summary}</p>
           </Row>
         )}
 
-        {/* Experience */}
         {cvData.experience.length > 0 && (
-          <Row label={L.experience} teal={TEAL}>
+          <Row label={L.experience} teal={TEAL} scale={S}>
             {cvData.experience.map((exp, i) => (
               <div key={i} className="entry">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 }}>
@@ -81,11 +79,14 @@ export default function TealHorizontalTemplate({ cvData, language }: Props) {
                   {exp.company}{exp.location && `, ${exp.location}`}
                 </div>
                 {exp.bullets.length > 0 && (
-                  <ul style={{ paddingLeft: 14, marginBottom: 4 }}>
+                  <div style={{ marginBottom: 4 }}>
                     {exp.bullets.map((b, j) => (
-                      <li key={j} style={{ fontSize: 11, color: '#555', lineHeight: 1.6 }}>{b}</li>
+                      <div key={j} style={{ display: 'flex', gap: 6, marginBottom: 3 }}>
+                        <span style={{ color: '#3DBDB3', fontSize: 10, flexShrink: 0, marginTop: 2 }}>•</span>
+                        <span style={{ fontSize: 11, color: '#555', lineHeight: 1.6 }}>{b}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
                 {i < cvData.experience.length - 1 && (
                   <div style={{ borderTop: '1px dashed #CCC', margin: '10px 0' }} />
@@ -95,9 +96,8 @@ export default function TealHorizontalTemplate({ cvData, language }: Props) {
           </Row>
         )}
 
-        {/* Education */}
         {cvData.education.length > 0 && (
-          <Row label={L.education} teal={TEAL}>
+          <Row label={L.education} teal={TEAL} scale={S}>
             {cvData.education.map((edu, i) => (
               <div key={i} className="entry" style={{ marginBottom: 8 }}>
                 <div style={{ fontSize: 12, fontStyle: 'italic', color: '#555' }}>
@@ -109,9 +109,8 @@ export default function TealHorizontalTemplate({ cvData, language }: Props) {
           </Row>
         )}
 
-        {/* Skills */}
         {cvData.skills.length > 0 && (
-          <Row label={L.skills} teal={TEAL}>
+          <Row label={L.skills} teal={TEAL} scale={S}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
               {cvData.skills.map((s, i) => (
                 s.startsWith('## ') ? (
@@ -127,31 +126,24 @@ export default function TealHorizontalTemplate({ cvData, language }: Props) {
           </Row>
         )}
 
-        {/* Languages */}
         {cvData.languages.length > 0 && (
-          <Row label={L.languages} teal={TEAL}>
+          <Row label={L.languages} teal={TEAL} scale={S}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 32px' }}>
-              {cvData.languages.map((lang, i) => {
-                const parts = lang.split(/[\-–—]/).map(s => s.trim())
-                const name = parts[0]
-                const level = parts[1] ?? ''
-                return (
-                  <div key={i}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>{name}:</span>
-                      <span style={{ fontSize: 11, color: '#888' }}>{level}</span>
-                    </div>
-                    <SegmentBar score={langScore(lang)} filled={TEAL} empty="#DDD" />
+              {cvData.languages.map((lang, i) => (
+                <div key={i}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#444' }}>{lang.name}:</span>
+                    <span style={{ fontSize: 11, color: '#888' }}>{lang.level}</span>
                   </div>
-                )
-              })}
+                  <SegmentBar score={lang.score} filled={TEAL} empty="#DDD" />
+                </div>
+              ))}
             </div>
           </Row>
         )}
 
-        {/* Hobbies */}
         {cvData.hobbies && cvData.hobbies.length > 0 && (
-          <Row label={L.hobbies} teal={TEAL}>
+          <Row label={L.hobbies} teal={TEAL} scale={S}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
               {cvData.hobbies.map((h, i) => (
                 <span key={i} style={{ fontSize: 11, color: '#555', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -166,9 +158,9 @@ export default function TealHorizontalTemplate({ cvData, language }: Props) {
   )
 }
 
-function Row({ label, teal, children }: { label: string; teal: string; children: React.ReactNode }) {
+function Row({ label, teal, scale = 1, children }: { label: string; teal: string; scale?: number; children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', borderBottom: '1px solid #EEE', padding: '14px 0' }}>
+    <div style={{ display: 'flex', borderBottom: '1px solid #EEE', padding: `${12 * scale}px 0` }}>
       <div style={{ width: 130, flexShrink: 0, paddingTop: 2 }}>
         <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1, color: teal }}>
           {label}

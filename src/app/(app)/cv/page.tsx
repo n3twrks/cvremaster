@@ -79,17 +79,25 @@ function CVEditor() {
       <div className="flex flex-1 overflow-hidden min-h-0">
 
         <LeftSidebar
-          cvData={store.cvData}
+          cvData={store.rawCvData}
           photo={store.photo}
           showPhoto={store.showPhoto}
+          showSummary={store.showSummary}
+          hiddenBullets={store.hiddenBullets}
           activeTemplateId={store.activeTemplateId}
           onUpdateCV={store.updateCV}
           onSetPhoto={store.setPhoto}
           onSetShowPhoto={store.setShowPhoto}
+          onSetShowSummary={store.setShowSummary}
+          showHobbies={store.showHobbies}
+          onSetShowHobbies={store.setShowHobbies}
+          onToggleHiddenBullet={store.toggleHiddenBullet}
+          spacingScale={store.spacingScale}
+          onSetSpacingScale={store.setSpacingScale}
           onSetTemplate={store.setTemplate}
         />
 
-        <CenterPanel cvData={store.cvData} templateId={store.activeTemplateId} language={store.activeLanguage} />
+        <CenterPanel cvData={store.cvData} templateId={store.activeTemplateId} language={store.activeLanguage} spacingScale={store.spacingScale} />
 
         <Sidebar
           key={projectId}

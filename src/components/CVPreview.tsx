@@ -135,7 +135,7 @@ export default function CVPreview({ cvData }: Props) {
                 <div className="flex flex-wrap gap-1.5">
                   {cvData.languages.map((l, i) => (
                     <span key={i} className="px-2 py-0.5 bg-[#D8EDDF] border border-[#A7D9B8] text-[#1B4332] text-xs font-body rounded">
-                      {l}
+                      {l.name}{l.level ? ` — ${l.level}` : ''}
                     </span>
                   ))}
                 </div>

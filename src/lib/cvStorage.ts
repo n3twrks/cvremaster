@@ -84,6 +84,50 @@ export function loadShowPhoto(projectId?: string): boolean {
   } catch { return true }
 }
 
+export function saveSpacingScale(val: number, projectId?: string): void {
+  try { localStorage.setItem(k('cvremaster_spacing_scale', projectId), JSON.stringify(val)) } catch {}
+}
+
+export function loadSpacingScale(projectId?: string): number {
+  try {
+    const raw = localStorage.getItem(k('cvremaster_spacing_scale', projectId))
+    return raw === null ? 1 : (JSON.parse(raw) as number)
+  } catch { return 1 }
+}
+
+export function saveShowHobbies(val: boolean, projectId?: string): void {
+  try { localStorage.setItem(k('cvremaster_show_hobbies', projectId), JSON.stringify(val)) } catch {}
+}
+
+export function loadShowHobbies(projectId?: string): boolean {
+  try {
+    const raw = localStorage.getItem(k('cvremaster_show_hobbies', projectId))
+    return raw === null ? true : (JSON.parse(raw) as boolean)
+  } catch { return true }
+}
+
+export function saveShowSummary(val: boolean, projectId?: string): void {
+  try { localStorage.setItem(k('cvremaster_show_summary', projectId), JSON.stringify(val)) } catch {}
+}
+
+export function loadShowSummary(projectId?: string): boolean {
+  try {
+    const raw = localStorage.getItem(k('cvremaster_show_summary', projectId))
+    return raw === null ? true : (JSON.parse(raw) as boolean)
+  } catch { return true }
+}
+
+export function saveHiddenBullets(hidden: string[], projectId?: string): void {
+  try { localStorage.setItem(k('cvremaster_hidden_bullets', projectId), JSON.stringify(hidden)) } catch {}
+}
+
+export function loadHiddenBullets(projectId?: string): string[] {
+  try {
+    const raw = localStorage.getItem(k('cvremaster_hidden_bullets', projectId))
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch { return [] }
+}
+
 export function loadVersions(projectId?: string): CVVersion[] {
   try {
     const raw = localStorage.getItem(k('cvremaster_versions', projectId))

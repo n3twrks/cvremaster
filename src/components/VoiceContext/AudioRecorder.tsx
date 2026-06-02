@@ -32,14 +32,26 @@ export default function AudioRecorder({ onStop, onCancel }: Props) {
       ? Math.floor((Date.now() - startTimeRef.current) / 1000)
       : 0
     cancelAnimationFrame(animFrameRef.current)
-    streamRef.current?.getTracks().forEach(t => t.stop())
+
     const recorder = mediaRef.current
-    if (recorder && recorder.state !== 'inactive') {
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType })
+
+    function finalize() {
+      // Stop tracks only AFTER blob is collected so recorder doesn't auto-stop first
+      streamRef.current?.getTracks().forEach(t => t.stop())
+      if (chunksRef.current.length > 0) {
+        const mimeType = recorder?.mimeType ?? 'audio/webm'
+        const blob = new Blob(chunksRef.current, { type: mimeType })
         onStopRef.current(blob, durationSec)
       }
+    }
+
+    if (recorder && recorder.state !== 'inactive') {
+      // Register listener BEFORE calling stop() to avoid race with auto-stop from track removal
+      recorder.addEventListener('stop', finalize, { once: true })
       recorder.stop()
+    } else {
+      // Recorder already stopped (e.g. stream disconnected externally)
+      finalize()
     }
   }
 
@@ -58,6 +70,9 @@ export default function AudioRecorder({ onStop, onCancel }: Props) {
   // Start recording
   useEffect(() => {
     let mounted = true
+    // Reset state for React StrictMode double-invocation
+    stoppedRef.current = false
+    chunksRef.current = []
 
     async function start() {
       try {
@@ -112,6 +127,7 @@ export default function AudioRecorder({ onStop, onCancel }: Props) {
     return () => {
       mounted = false
       cancelAnimationFrame(animFrameRef.current)
+      // Stop tracks on unmount without triggering the stop() flow
       streamRef.current?.getTracks().forEach(t => t.stop())
     }
   }, [])

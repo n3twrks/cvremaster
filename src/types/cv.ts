@@ -12,6 +12,12 @@ export interface Education {
   date: string
 }
 
+export interface Language {
+  name: string
+  level: string
+  score: number  // 1–5
+}
+
 export interface CVData {
   name: string
   tagline: string
@@ -20,7 +26,7 @@ export interface CVData {
   experience: Experience[]
   education: Education[]
   skills: string[]
-  languages: string[]
+  languages: Language[]
   hobbies?: string[]
   photo?: string
 }

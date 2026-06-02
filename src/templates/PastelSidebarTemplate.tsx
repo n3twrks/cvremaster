@@ -2,23 +2,23 @@ import { CVData } from '@/types/cv'
 import { getSectionLabels } from '@/lib/sectionLabels'
 import { ContactItem } from './utils'
 
-interface Props { cvData: CVData; language?: string }
+interface Props { cvData: CVData; language?: string; spacingScale?: number }
 
 const PEACH = '#F2C4A0'
 const PEACH_BAND = '#F9E4D0'
 const ACCENT = '#C97D50'
 const SIDEBAR_BG = '#F5F5F3'
 
-export default function PastelSidebarTemplate({ cvData, language }: Props) {
+export default function PastelSidebarTemplate({ cvData, language, spacingScale = 1 }: Props) {
   const L = getSectionLabels(language)
+  const S = spacingScale
   return (
     <div
       id="cv-content"
       className="max-w-[780px] mx-auto bg-white shadow-sm print:shadow-none print:max-w-full"
       style={{ display: 'flex', minHeight: 900, fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif' }}
     >
-      {/* Left sidebar */}
-      <div style={{ width: '30%', background: SIDEBAR_BG, padding: '32px 16px', flexShrink: 0 }}>
+      <div style={{ width: '30%', background: SIDEBAR_BG, padding: `${28 * S}px 16px`, flexShrink: 0 }}>
         {/* Circular photo with peach bg — hidden entirely when not set */}
         {cvData.photo && (
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
@@ -93,44 +93,54 @@ export default function PastelSidebarTemplate({ cvData, language }: Props) {
               {L.languages}
             </div>
             {cvData.languages.map((l, i) => (
-              <div key={i} style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>{l}</div>
+              <div key={i} style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>
+                {l.name}{l.level ? ` — ${l.level}` : ''}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Hobbies */}
+        {cvData.hobbies && cvData.hobbies.length > 0 && (
+          <div>
+            <div style={{ height: 1, background: '#DDD', margin: '12px 0' }} />
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#444', marginBottom: 8 }}>
+              {L.hobbies}
+            </div>
+            {cvData.hobbies.map((h, i) => (
+              <div key={i} style={{ fontSize: 10, color: '#555', marginBottom: 4 }}>• {h}</div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Right content */}
-      <div style={{ flex: 1, background: '#FFFFFF', padding: '32px 28px' }}>
-        {/* Name */}
+      <div style={{ flex: 1, background: '#FFFFFF', padding: `${28 * S}px 28px` }}>
         <h1 style={{ fontSize: 32, fontWeight: 800, color: '#333', letterSpacing: -0.5, marginBottom: 0, lineHeight: 1.1 }}>
           {cvData.name}
         </h1>
 
-        {/* Tagline with peach background band */}
         {cvData.tagline && (
-          <div style={{ background: PEACH_BAND, padding: '6px 0 6px 0', marginTop: 4, marginBottom: 16 }}>
+          <div style={{ background: PEACH_BAND, padding: '5px 0', marginTop: 6, marginBottom: 14 * S }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: ACCENT, letterSpacing: 0.5, textTransform: 'uppercase' }}>
               {cvData.tagline}
             </span>
           </div>
         )}
 
-        {/* Summary */}
         {cvData.summary && (
-          <div style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: 12, color: '#555', lineHeight: 1.7 }}>{cvData.summary}</p>
-            <div style={{ height: 1, background: '#EEE', marginTop: 14 }} />
+          <div style={{ marginBottom: 16 * S }}>
+            <p style={{ fontSize: 12, color: '#555', lineHeight: 1.6 }}>{cvData.summary}</p>
+            <div style={{ height: 1, background: '#EEE', marginTop: 12 * S }} />
           </div>
         )}
 
-        {/* Experience */}
         {cvData.experience.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, color: '#333', marginBottom: 12 }}>
+          <div style={{ marginBottom: 16 * S }}>
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, color: '#333', marginBottom: 10 * S }}>
               {L.experience}
             </div>
             {cvData.experience.map((exp, i) => (
-              <div key={i} className="entry" style={{ marginBottom: 16 }}>
+              <div key={i} className="entry" style={{ marginBottom: 14 * S }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: '#333' }}>{exp.title}</div>
                 <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>
                   {exp.company}{exp.location && ` — ${exp.location}`}, {exp.date}
@@ -149,20 +159,6 @@ export default function PastelSidebarTemplate({ cvData, language }: Props) {
           </div>
         )}
 
-        {/* Hobbies */}
-        {cvData.hobbies && cvData.hobbies.length > 0 && (
-          <div>
-            <div style={{ height: 1, background: '#EEE', marginBottom: 14 }} />
-            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.5, color: '#333', marginBottom: 8 }}>
-              {L.hobbies}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>
-              {cvData.hobbies.map((h, i) => (
-                <span key={i} style={{ fontSize: 11, color: '#666' }}>• {h}</span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

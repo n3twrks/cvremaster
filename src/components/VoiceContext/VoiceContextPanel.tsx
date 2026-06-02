@@ -171,6 +171,7 @@ export default function VoiceContextPanel({ cvData, projectId, onSendToChat }: P
           entries={entries}
           savedText={pack.combinedText}
           onSave={saveCombinedText}
+          onSendToChat={onSendToChat}
         />
       )}
     </div>

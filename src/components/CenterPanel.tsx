@@ -12,9 +12,10 @@ interface Props {
   cvData: CVData | null
   templateId: string
   language?: string
+  spacingScale?: number
 }
 
-export default function CenterPanel({ cvData, templateId, language }: Props) {
+export default function CenterPanel({ cvData, templateId, language, spacingScale = 1 }: Props) {
   const [viewMode, setViewMode] = useState<'continuous' | 'a4'>('continuous')
   const a4WrapRef = useRef<HTMLDivElement>(null)
 
@@ -56,7 +57,7 @@ export default function CenterPanel({ cvData, templateId, language }: Props) {
 
       {viewMode === 'continuous' ? (
         <div className="flex-1 overflow-auto bg-[#F4F3F0] p-6 print:p-0 print:bg-white">
-          <TemplateRenderer cvData={cvData} templateId={templateId} language={language} />
+          <TemplateRenderer cvData={cvData} templateId={templateId} language={language} spacingScale={spacingScale} />
         </div>
       ) : (
         <div className="flex-1 overflow-auto bg-[#6E6E6E] py-6 print:p-0 print:bg-white">
@@ -69,7 +70,7 @@ export default function CenterPanel({ cvData, templateId, language }: Props) {
             ref={a4WrapRef}
             style={{ width: A4_W_PX, margin: '0 auto', position: 'relative' }}
           >
-            <TemplateRenderer cvData={cvData} templateId={templateId} language={language} />
+            <TemplateRenderer cvData={cvData} templateId={templateId} language={language} spacingScale={spacingScale} />
             <PageSeparators wrapperRef={a4WrapRef} />
           </div>
         </div>

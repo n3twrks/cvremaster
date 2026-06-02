@@ -1,4 +1,5 @@
-import { CVData } from '@/types/cv'
+import { CVData, Language } from '@/types/cv'
+import { langScore } from '@/templates/utils'
 
 /** Convert an array that may contain objects or strings into a string[] */
 function toStringArray(arr: unknown): string[] {
@@ -11,6 +12,28 @@ function toStringArray(arr: unknown): string[] {
         .join(' — ')
     }
     return String(item)
+  })
+}
+
+/** Convert an array to Language[], handling both old "Name — Level" strings and new objects */
+function toLanguageArray(arr: unknown): Language[] {
+  if (!Array.isArray(arr)) return []
+  return arr.map(item => {
+    if (typeof item === 'object' && item !== null) {
+      const obj = item as Record<string, unknown>
+      const name = String(obj.name ?? '')
+      const level = String(obj.level ?? '')
+      const score = typeof obj.score === 'number'
+        ? Math.min(5, Math.max(1, Math.round(obj.score)))
+        : langScore(level || name)
+      return { name, level, score }
+    }
+    // Old string format: "Français — Natif" or just "Français"
+    const str = String(item)
+    const parts = str.split(/[\-–—]/).map(s => s.trim())
+    const name = parts[0]
+    const level = parts[1] ?? ''
+    return { name, level, score: langScore(str) }
   })
 }
 
@@ -42,7 +65,7 @@ export function normaliseCVData(raw: Record<string, unknown>): CVData {
     experience,
     education,
     skills: toStringArray(raw.skills),
-    languages: toStringArray(raw.languages),
+    languages: toLanguageArray(raw.languages),
     hobbies: toStringArray(raw.hobbies).length ? toStringArray(raw.hobbies) : undefined,
     photo: typeof raw.photo === 'string' ? raw.photo : undefined,
   }

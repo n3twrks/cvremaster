@@ -10,15 +10,16 @@ interface Props {
   cvData: CVData
   templateId: string
   language?: string
+  spacingScale?: number
 }
 
-export default function TemplateRenderer({ cvData, templateId, language }: Props) {
+export default function TemplateRenderer({ cvData, templateId, language, spacingScale = 1 }: Props) {
   switch (templateId) {
-    case 'sidebar-dark':     return <SidebarDarkTemplate cvData={cvData} language={language} />
-    case 'teal-horizontal':  return <TealHorizontalTemplate cvData={cvData} language={language} />
-    case 'teal-sidebar':     return <TealSidebarTemplate cvData={cvData} language={language} />
-    case 'navy-dark':        return <NavyDarkTemplate cvData={cvData} language={language} />
-    case 'pastel-sidebar':   return <PastelSidebarTemplate cvData={cvData} language={language} />
-    default:                 return <ClassicTemplate cvData={cvData} language={language} />
+    case 'sidebar-dark':     return <SidebarDarkTemplate cvData={cvData} language={language} spacingScale={spacingScale} />
+    case 'teal-horizontal':  return <TealHorizontalTemplate cvData={cvData} language={language} spacingScale={spacingScale} />
+    case 'teal-sidebar':     return <TealSidebarTemplate cvData={cvData} language={language} spacingScale={spacingScale} />
+    case 'navy-dark':        return <NavyDarkTemplate cvData={cvData} language={language} spacingScale={spacingScale} />
+    case 'pastel-sidebar':   return <PastelSidebarTemplate cvData={cvData} language={language} spacingScale={spacingScale} />
+    default:                 return <ClassicTemplate cvData={cvData} language={language} spacingScale={spacingScale} />
   }
 }

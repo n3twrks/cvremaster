@@ -2,17 +2,18 @@ import { CVData } from '@/types/cv'
 import { getSectionLabels } from '@/lib/sectionLabels'
 import { ContactItem } from './utils'
 
-interface Props { cvData: CVData; language?: string }
+interface Props { cvData: CVData; language?: string; spacingScale?: number }
 
-export default function ClassicTemplate({ cvData, language }: Props) {
+export default function ClassicTemplate({ cvData, language, spacingScale = 1 }: Props) {
   const L = getSectionLabels(language)
+  const S = spacingScale
   return (
     <div
       id="cv-content"
-      className="max-w-[780px] mx-auto bg-white border border-[#E5E4E0] shadow-sm p-10 print:shadow-none print:border-none print:max-w-full print:p-0"
+      className="max-w-[780px] mx-auto bg-white border border-[#E5E4E0] shadow-sm print:shadow-none print:border-none print:max-w-full"
+      style={{ padding: `${40 * S}px` }}
     >
-      {/* Header */}
-      <div className="mb-6 pb-6 border-b border-[#E5E4E0]">
+      <div style={{ marginBottom: 24 * S, paddingBottom: 24 * S, borderBottom: '1px solid #E5E4E0' }}>
         <div className="flex items-start gap-6">
           {cvData.photo && (
             <img
@@ -39,9 +40,8 @@ export default function ClassicTemplate({ cvData, language }: Props) {
         </div>
       </div>
 
-      {/* Summary */}
       {cvData.summary && (
-        <section className="mb-6">
+        <section style={{ marginBottom: 24 * S }}>
           <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-2">
             {L.summary}
           </h2>
@@ -49,13 +49,12 @@ export default function ClassicTemplate({ cvData, language }: Props) {
         </section>
       )}
 
-      {/* Experience */}
       {cvData.experience.length > 0 && (
-        <section className="mb-6">
-          <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-3">
+        <section style={{ marginBottom: 24 * S }}>
+          <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332]" style={{ marginBottom: 12 * S }}>
             {L.experience}
           </h2>
-          <div className="space-y-5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 * S }}>
             {cvData.experience.map((exp, i) => (
               <div key={i} className="entry">
                 <div className="flex items-start justify-between gap-4 mb-1">
@@ -69,11 +68,14 @@ export default function ClassicTemplate({ cvData, language }: Props) {
                   <span className="font-mono text-xs text-[#9D9C98] whitespace-nowrap shrink-0">{exp.date}</span>
                 </div>
                 {exp.bullets.length > 0 && (
-                  <ul className="list-disc list-inside space-y-1 mt-1">
+                  <div className="space-y-1 mt-1">
                     {exp.bullets.map((b, j) => (
-                      <li key={j} className="text-sm text-[#1A1A18] font-body leading-snug">{b}</li>
+                      <div key={j} className="flex gap-2 items-start">
+                        <span className="text-[#1B4332] text-xs leading-snug shrink-0 mt-px">•</span>
+                        <span className="text-sm text-[#1A1A18] font-body leading-snug">{b}</span>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             ))}
@@ -81,13 +83,12 @@ export default function ClassicTemplate({ cvData, language }: Props) {
         </section>
       )}
 
-      {/* Education */}
       {cvData.education.length > 0 && (
-        <section className="mb-6">
-          <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-3">
+        <section style={{ marginBottom: 24 * S }}>
+          <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332]" style={{ marginBottom: 12 * S }}>
             {L.education}
           </h2>
-          <div className="space-y-3">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 * S }}>
             {cvData.education.map((edu, i) => (
               <div key={i} className="entry flex items-start justify-between gap-4">
                 <div>
@@ -101,9 +102,8 @@ export default function ClassicTemplate({ cvData, language }: Props) {
         </section>
       )}
 
-      {/* Skills & Languages */}
       {(cvData.skills.length > 0 || cvData.languages.length > 0) && (
-        <section className="grid grid-cols-2 gap-6 mb-6">
+        <section className="grid grid-cols-2 gap-6" style={{ marginBottom: 24 * S }}>
           {cvData.skills.length > 0 && (
             <div>
               <h2 className="uppercase tracking-widest text-xs font-body font-medium text-[#1B4332] mb-2">
@@ -128,7 +128,7 @@ export default function ClassicTemplate({ cvData, language }: Props) {
               <div className="flex flex-wrap gap-1.5">
                 {cvData.languages.map((l, i) => (
                   <span key={i} className="px-2 py-0.5 bg-[#D8EDDF] border border-[#A7D9B8] text-[#1B4332] text-xs font-body rounded">
-                    {l}
+                    {l.name}{l.level ? ` — ${l.level}` : ''}
                   </span>
                 ))}
               </div>

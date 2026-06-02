@@ -11,10 +11,18 @@ interface Props {
   cvData: CVData | null
   photo: string | null
   showPhoto: boolean
+  showSummary: boolean
+  hiddenBullets: string[]
+  spacingScale: number
   activeTemplateId: string
   onUpdateCV: (data: CVData) => void
   onSetPhoto: (dataUrl: string | null) => void
   onSetShowPhoto: (v: boolean) => void
+  onSetShowSummary: (v: boolean) => void
+  showHobbies: boolean
+  onSetShowHobbies: (v: boolean) => void
+  onToggleHiddenBullet: (key: string) => void
+  onSetSpacingScale: (v: number) => void
   onSetTemplate: (id: string) => void
 }
 
@@ -22,10 +30,18 @@ export default function LeftSidebar({
   cvData,
   photo,
   showPhoto,
+  showSummary,
+  showHobbies,
+  hiddenBullets,
+  spacingScale,
   activeTemplateId,
   onUpdateCV,
   onSetPhoto,
   onSetShowPhoto,
+  onSetShowSummary,
+  onSetShowHobbies,
+  onToggleHiddenBullet,
+  onSetSpacingScale,
   onSetTemplate,
 }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('donnees')
@@ -61,6 +77,14 @@ export default function LeftSidebar({
             onSetPhoto={onSetPhoto}
             showPhoto={showPhoto}
             onSetShowPhoto={onSetShowPhoto}
+            showSummary={showSummary}
+            onSetShowSummary={onSetShowSummary}
+            showHobbies={showHobbies}
+            onSetShowHobbies={onSetShowHobbies}
+            hiddenBullets={hiddenBullets}
+            onToggleHiddenBullet={onToggleHiddenBullet}
+            spacingScale={spacingScale}
+            onSetSpacingScale={onSetSpacingScale}
           />
         ) : (
           <TemplateGallery

@@ -52,7 +52,7 @@ export function generateCVHTML(cv: CVData): string {
     : ''
 
   const languages = cv.languages.length
-    ? `<div class="col"><h2>Langues</h2><div class="tags lang">${cv.languages.map(l => `<span>${escHtml(l)}</span>`).join('')}</div></div>`
+    ? `<div class="col"><h2>Langues</h2><div class="tags lang">${cv.languages.map(l => `<span>${escHtml(l.name)}${l.level ? ` — ${escHtml(l.level)}` : ''}</span>`).join('')}</div></div>`
     : ''
 
   const hobbies =

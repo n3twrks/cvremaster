@@ -1,13 +1,14 @@
 import { CVData } from '@/types/cv'
 import { getSectionLabels } from '@/lib/sectionLabels'
-import { langScore, SegmentBar, ContactItem } from './utils'
+import { SegmentBar, ContactItem } from './utils'
 
-interface Props { cvData: CVData; language?: string }
+interface Props { cvData: CVData; language?: string; spacingScale?: number }
 
 const TEAL = '#3DBDB3'
 
-export default function TealSidebarTemplate({ cvData, language }: Props) {
+export default function TealSidebarTemplate({ cvData, language, spacingScale = 1 }: Props) {
   const L = getSectionLabels(language)
+  const S = spacingScale
   return (
     <div
       id="cv-content"
@@ -15,7 +16,7 @@ export default function TealSidebarTemplate({ cvData, language }: Props) {
       style={{ display: 'flex', minHeight: 900, fontFamily: 'system-ui, sans-serif' }}
     >
       {/* Left sidebar */}
-      <div style={{ width: '30%', background: '#FAFAFA', borderRight: `3px solid ${TEAL}`, padding: '24px 16px', flexShrink: 0 }}>
+      <div style={{ width: '30%', background: '#FAFAFA', borderRight: `3px solid ${TEAL}`, padding: `${20 * S}px 16px`, flexShrink: 0 }}>
         {/* Photo — hidden entirely when not set */}
         {cvData.photo && (
           <img
@@ -25,9 +26,8 @@ export default function TealSidebarTemplate({ cvData, language }: Props) {
           />
         )}
 
-        {/* Contact */}
         {cvData.contact.length > 0 && (
-          <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${TEAL}` }}>
+          <div style={{ marginBottom: 14 * S, paddingBottom: 14 * S, borderBottom: `1px solid ${TEAL}` }}>
             {cvData.contact.map((c, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 6 }}>
                 <span style={{ color: TEAL, fontSize: 10, marginTop: 2, flexShrink: 0 }}>◆</span>
@@ -37,9 +37,8 @@ export default function TealSidebarTemplate({ cvData, language }: Props) {
           </div>
         )}
 
-        {/* Skills */}
         {cvData.skills.length > 0 && (
-          <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: `1px solid ${TEAL}` }}>
+          <div style={{ marginBottom: 14 * S, paddingBottom: 14 * S, borderBottom: `1px solid ${TEAL}` }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', marginBottom: 8 }}>
               {L.skills}
             </div>
@@ -56,26 +55,20 @@ export default function TealSidebarTemplate({ cvData, language }: Props) {
           </div>
         )}
 
-        {/* Languages */}
         {cvData.languages.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 14 * S }}>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', marginBottom: 8 }}>
               {L.languages}
             </div>
-            {cvData.languages.map((lang, i) => {
-              const parts = lang.split(/[\-–—]/).map(s => s.trim())
-              const name = parts[0]
-              const level = parts[1] ?? ''
-              return (
-                <div key={i} style={{ marginBottom: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#333' }}>{name}</span>
-                    <span style={{ fontSize: 9, color: '#888' }}>{level}</span>
-                  </div>
-                  <SegmentBar score={langScore(lang)} filled={TEAL} empty="#DDD" />
+            {cvData.languages.map((lang, i) => (
+              <div key={i} style={{ marginBottom: 8 * S }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: '#333' }}>{lang.name}</span>
+                  <span style={{ fontSize: 9, color: '#888' }}>{lang.level}</span>
                 </div>
-              )
-            })}
+                <SegmentBar score={lang.score} filled={TEAL} empty="#DDD" />
+              </div>
+            ))}
           </div>
         )}
 
@@ -93,28 +86,25 @@ export default function TealSidebarTemplate({ cvData, language }: Props) {
       </div>
 
       {/* Right content */}
-      <div style={{ flex: 1, padding: '24px 24px' }}>
-        {/* Name + tagline at top */}
-        <h1 style={{ fontSize: 28, fontWeight: 800, color: '#333', marginBottom: 2 }}>{cvData.name}</h1>
+      <div style={{ flex: 1, padding: `${22 * S}px 24px` }}>
+        <h1 style={{ fontSize: 28, fontWeight: 800, color: '#333', marginBottom: 6 }}>{cvData.name}</h1>
         {cvData.tagline && (
-          <p style={{ fontSize: 12, color: TEAL, fontWeight: 600, marginBottom: 12 }}>{cvData.tagline}</p>
+          <p style={{ fontSize: 12, color: TEAL, fontWeight: 600, marginBottom: 12 * S }}>{cvData.tagline}</p>
         )}
 
-        {/* Summary */}
         {cvData.summary && (
-          <div style={{ background: '#F8FFFE', borderLeft: `3px solid ${TEAL}`, padding: '10px 12px', marginBottom: 20, fontSize: 11, color: '#555', lineHeight: 1.6 }}>
+          <div style={{ background: '#F8FFFE', borderLeft: `3px solid ${TEAL}`, padding: '10px 12px', marginBottom: 16 * S, fontSize: 11, color: '#555', lineHeight: 1.5 }}>
             {cvData.summary}
           </div>
         )}
 
-        {/* Experience */}
         {cvData.experience.length > 0 && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', borderBottom: `2px solid ${TEAL}`, paddingBottom: 4, marginBottom: 12 }}>
+          <div style={{ marginBottom: 16 * S }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', borderBottom: `2px solid ${TEAL}`, paddingBottom: 4, marginBottom: 10 * S }}>
               {L.experience}
             </div>
             {cvData.experience.map((exp, i) => (
-              <div key={i} className="entry" style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+              <div key={i} className="entry" style={{ display: 'flex', gap: 10, marginBottom: 14 * S }}>
                 {/* Rotated date */}
                 <div style={{ flexShrink: 0, width: 40, display: 'flex', alignItems: 'flex-start', paddingTop: 2 }}>
                   <span style={{
@@ -147,14 +137,13 @@ export default function TealSidebarTemplate({ cvData, language }: Props) {
           </div>
         )}
 
-        {/* Education */}
         {cvData.education.length > 0 && (
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', borderBottom: `2px solid ${TEAL}`, paddingBottom: 4, marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1.5, textTransform: 'uppercase', color: '#333', borderBottom: `2px solid ${TEAL}`, paddingBottom: 4, marginBottom: 10 * S }}>
               {L.education}
             </div>
             {cvData.education.map((edu, i) => (
-              <div key={i} className="entry" style={{ marginBottom: 8 }}>
+              <div key={i} className="entry" style={{ marginBottom: 8 * S }}>
                 <div style={{ fontSize: 11, color: '#888', marginBottom: 1 }}>{edu.date}</div>
                 <div style={{ fontWeight: 700, fontSize: 12, color: '#333' }}>{edu.degree}</div>
                 <div style={{ fontSize: 11, fontStyle: 'italic', color: '#666' }}>{edu.school}</div>
