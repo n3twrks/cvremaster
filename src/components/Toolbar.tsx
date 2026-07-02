@@ -32,20 +32,25 @@ interface Props {
   removeVersion: (id: string) => void
   activeLanguage: string
   setActiveLanguage: (lang: string) => void
+  labelLanguage: string
+  setLabelLanguage: (lang: string) => void
 }
 
 export default function Toolbar({
   cvData, onUpdateCV, addMessage, setIsLoading,
   versions, createVersion, upsertVersion, restoreVersion, removeVersion,
   activeLanguage, setActiveLanguage,
+  labelLanguage, setLabelLanguage,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const versionsRef = useRef<HTMLDivElement>(null)
   const langRef = useRef<HTMLDivElement>(null)
+  const labelLangRef = useRef<HTMLDivElement>(null)
   const [pdfLoading, setPdfLoading] = useState(false)
   const [translating, setTranslating] = useState(false)
   const [showVersions, setShowVersions] = useState(false)
   const [showLangPicker, setShowLangPicker] = useState(false)
+  const [showLabelLangPicker, setShowLabelLangPicker] = useState(false)
   const [versionName, setVersionName] = useState('')
   const [expandedVersionId, setExpandedVersionId] = useState<string | null>(null)
 
@@ -66,6 +71,15 @@ export default function Toolbar({
     document.addEventListener('mousedown', onOutside)
     return () => document.removeEventListener('mousedown', onOutside)
   }, [showLangPicker])
+
+  useEffect(() => {
+    if (!showLabelLangPicker) return
+    function onOutside(e: MouseEvent) {
+      if (labelLangRef.current && !labelLangRef.current.contains(e.target as Node)) setShowLabelLangPicker(false)
+    }
+    document.addEventListener('mousedown', onOutside)
+    return () => document.removeEventListener('mousedown', onOutside)
+  }, [showLabelLangPicker])
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -299,6 +313,49 @@ export default function Toolbar({
                   )}
                   {hasVersion && !isCurrent && (
                     <span className="text-[9px] font-mono text-[#9D9C98]">sauvegardé</span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Section-title language (relabel only, no content translation) */}
+      <div ref={labelLangRef} className="relative">
+        <button
+          onClick={() => setShowLabelLangPicker(v => !v)}
+          disabled={!cvData}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-body font-medium transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed ${
+            showLabelLangPicker
+              ? 'border-[#1B4332] bg-[#D8EDDF] text-[#1B4332]'
+              : 'border-[#CCCBC6] bg-white text-[#1A1A18] hover:bg-[#F4F3F0]'
+          }`}
+          title="Changer la langue des titres de section (sans traduire le contenu)"
+        >
+          <span className="font-display text-[13px] leading-none">Aa</span>
+          <span>{labelLanguage.toUpperCase()}</span>
+        </button>
+
+        {showLabelLangPicker && (
+          <div className="absolute top-full left-0 mt-1.5 w-52 bg-white border border-[#E5E4E0] rounded-lg shadow-lg z-50 py-1">
+            <p className="px-3 pt-1 pb-2 text-[10px] font-body text-[#9D9C98] leading-snug">
+              Titres de section uniquement — le contenu du CV n&apos;est pas traduit
+            </p>
+            {LANGUAGES.map(lang => {
+              const isCurrent = lang.code === labelLanguage
+              return (
+                <button
+                  key={lang.code}
+                  onClick={() => { setLabelLanguage(lang.code); setShowLabelLangPicker(false) }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-body transition-colors hover:bg-[#F4F3F0] ${isCurrent ? 'text-[#1B4332] font-medium' : 'text-[#1A1A18]'}`}
+                >
+                  <span className="text-base leading-none">{lang.flag}</span>
+                  <span className="flex-1 text-left">{lang.name}</span>
+                  {isCurrent && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
                   )}
                 </button>
               )

@@ -35,6 +35,7 @@ interface StoreState {
   spacingScale: number
   activeTemplateId: string
   activeLanguage: string
+  labelLanguage: string
   versions: CVVersion[]
   messages: Message[]
   isLoading: boolean
@@ -51,6 +52,7 @@ type StoreAction =
   | { type: 'SET_SPACING_SCALE'; scale: number }
   | { type: 'SET_TEMPLATE'; id: string }
   | { type: 'SET_LANGUAGE'; lang: string }
+  | { type: 'SET_LABEL_LANGUAGE'; lang: string }
   | { type: 'SET_VERSIONS'; versions: CVVersion[] }
   | { type: 'PREPEND_VERSION'; version: CVVersion }
   | { type: 'REMOVE_VERSION'; id: string }
@@ -67,6 +69,7 @@ const DEFAULT_STATE: StoreState = {
   spacingScale: 1,
   activeTemplateId: 'classic',
   activeLanguage: 'fr',
+  labelLanguage: 'fr',
   versions: [],
   messages: INITIAL_MESSAGES,
   isLoading: false,
@@ -84,6 +87,7 @@ function reducer(state: StoreState, action: StoreAction): StoreState {
     case 'SET_SPACING_SCALE': return { ...state, spacingScale: action.scale }
     case 'SET_TEMPLATE': return { ...state, activeTemplateId: action.id }
     case 'SET_LANGUAGE': return { ...state, activeLanguage: action.lang }
+    case 'SET_LABEL_LANGUAGE': return { ...state, labelLanguage: action.lang }
     case 'SET_VERSIONS': return { ...state, versions: action.versions }
     case 'PREPEND_VERSION': return { ...state, versions: [action.version, ...state.versions].slice(0, 20) }
     case 'REMOVE_VERSION': return { ...state, versions: state.versions.filter(v => v.id !== action.id) }
@@ -117,6 +121,12 @@ function loadProjectState(projectId: string): StoreState {
     } catch {}
   }
 
+  let labelLanguage = language
+  try {
+    const savedLabelLang = localStorage.getItem(`cvremaster_label_language_${projectId}`)
+    if (savedLabelLang) labelLanguage = savedLabelLang
+  } catch {}
+
   return {
     cvData,
     photo: savedPhoto,
@@ -127,6 +137,7 @@ function loadProjectState(projectId: string): StoreState {
     spacingScale: loadSpacingScale(projectId),
     activeTemplateId: loadTemplate(projectId),
     activeLanguage: language,
+    labelLanguage,
     versions: loadVersions(projectId),
     messages,
     isLoading: false,
@@ -197,6 +208,13 @@ export function useCVStore(projectId: string) {
     dispatch({ type: 'SET_LANGUAGE', lang })
     try { localStorage.setItem(`cvremaster_language_${projectId}`, lang) } catch {}
     if (projectId) updateProjectMeta(projectId, { language: lang })
+    // Keep section-title language in sync by default when the content itself gets translated.
+    setLabelLanguage(lang)
+  }
+
+  function setLabelLanguage(lang: string) {
+    dispatch({ type: 'SET_LABEL_LANGUAGE', lang })
+    try { localStorage.setItem(`cvremaster_label_language_${projectId}`, lang) } catch {}
   }
 
   function createVersion(name: string, language?: string) {
@@ -249,6 +267,8 @@ export function useCVStore(projectId: string) {
     activeTemplateId: state.activeTemplateId,
     activeLanguage: state.activeLanguage,
     setActiveLanguage,
+    labelLanguage: state.labelLanguage,
+    setLabelLanguage,
     versions: state.versions,
     messages: state.messages,
     isLoading: state.isLoading,

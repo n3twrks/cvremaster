@@ -74,6 +74,8 @@ function CVEditor() {
         removeVersion={store.removeVersion}
         activeLanguage={store.activeLanguage}
         setActiveLanguage={store.setActiveLanguage}
+        labelLanguage={store.labelLanguage}
+        setLabelLanguage={store.setLabelLanguage}
       />
 
       <div className="flex flex-1 overflow-hidden min-h-0">
@@ -97,7 +99,7 @@ function CVEditor() {
           onSetTemplate={store.setTemplate}
         />
 
-        <CenterPanel cvData={store.cvData} templateId={store.activeTemplateId} language={store.activeLanguage} spacingScale={store.spacingScale} />
+        <CenterPanel cvData={store.cvData} templateId={store.activeTemplateId} language={store.labelLanguage} spacingScale={store.spacingScale} />
 
         <Sidebar
           key={projectId}
